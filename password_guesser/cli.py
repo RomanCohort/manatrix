@@ -333,6 +333,8 @@ Available subcommands:
   script         Script execution and replay
   data           Data import/export/convert utilities
   output         Output formatting (table/json/csv/markdown/html)
+  chart          Generate charts and visualizations (bar/line/pie/heatmap)
+  export         Export reports with embedded charts (PNG/SVG/PDF/HTML/DOCX)
   doc            Documentation and help system
   help           Show help for commands (with examples)
 """)
@@ -526,8 +528,16 @@ Available subcommands:
     report_parser.add_argument("--session", "-s", required=True, help="Session JSON file")
     report_parser.add_argument("--output", "-o", required=True, help="Output file path")
     report_parser.add_argument("--format", "-f", default="markdown",
-                              choices=["json", "markdown", "md", "html"],
+                              choices=["json", "markdown", "md", "html", "pdf", "pptx"],
                               help="Report format")
+    report_parser.add_argument("--include-charts", action="store_true", help="Embed charts in report")
+    report_parser.add_argument("--include-graph", action="store_true", help="Embed attack graph")
+    report_parser.add_argument("--chart-type", default="bar",
+                              choices=["bar", "pie", "line", "radar"],
+                              help="Chart type for embedded charts")
+    report_parser.add_argument("--template", default="default",
+                              choices=["default", "executive", "technical", "compliance"],
+                              help="Report template")
     report_parser.set_defaults(func=cmd_report)
 
     # --- version ---
@@ -953,6 +963,42 @@ Available subcommands:
     help_parser.add_argument("--examples", "-e", action="store_true", help="Show examples")
     help_parser.add_argument("--verbose", "-v", action="store_true", help="Verbose help")
     help_parser.set_defaults(func=cmd_help)
+
+    # --- chart ---
+    chart_parser = subparsers.add_parser("chart", help="Generate charts and visualizations")
+    chart_parser.add_argument("--type", "-t", default="bar",
+                              choices=["bar", "line", "pie", "scatter", "histogram",
+                                       "heatmap", "radar", "treemap", "bubble"],
+                              help="Chart type")
+    chart_parser.add_argument("--data", "-d", default=None, help="Data file (JSON/CSV)")
+    chart_parser.add_argument("--output", "-o", required=True, help="Output file (png/svg/pdf)")
+    chart_parser.add_argument("--title", default=None, help="Chart title")
+    chart_parser.add_argument("--xlabel", default=None, help="X-axis label")
+    chart_parser.add_argument("--ylabel", default=None, help="Y-axis label")
+    chart_parser.add_argument("--width", type=int, default=1200, help="Image width (px)")
+    chart_parser.add_argument("--height", type=int, default=800, help="Image height (px)")
+    chart_parser.add_argument("--style", default="default",
+                              choices=["default", "dark", "ggplot", "seaborn", "bmh"],
+                              help="Chart style")
+    chart_parser.add_argument("--color", default=None, help="Color scheme (comma-separated)")
+    chart_parser.add_argument("--no-grid", action="store_true", help="Hide grid lines")
+    chart_parser.add_argument("--legend", action="store_true", help="Show legend")
+    chart_parser.add_argument("--interactive", action="store_true", help="Generate interactive HTML (plotly)")
+    chart_parser.set_defaults(func=cmd_chart)
+
+    # --- export ---
+    export_parser = subparsers.add_parser("export", help="Export data and reports to various formats")
+    export_parser.add_argument("--input", "-i", required=True, help="Input file (JSON/CSV/YAML)")
+    export_parser.add_argument("--output", "-o", required=True, help="Output file path")
+    export_parser.add_argument("--format", "-f", default=None,
+                               choices=["png", "svg", "pdf", "html", "docx", "xlsx", "pptx"],
+                               help="Export format (auto-detected from extension if not set)")
+    export_parser.add_argument("--template", default=None, help="Report template name")
+    export_parser.add_argument("--title", default=None, help="Document title")
+    export_parser.add_argument("--include-charts", action="store_true", help="Include charts in export")
+    export_parser.add_argument("--include-graph", action="store_true", help="Include attack graph")
+    export_parser.add_argument("--embed-images", action="store_true", help="Embed images as base64")
+    export_parser.set_defaults(func=cmd_export)
 
     # --- doc ---
     doc_parser = subparsers.add_parser("doc", help="Documentation and help system")
@@ -6729,6 +6775,992 @@ def cmd_output(args):
         print(f"\n  [OK] Written to {output_file}")
 
 
+# ==================== Chart & Visualization ====================
+
+def cmd_chart(args):
+    """Generate charts and visualizations."""
+    chart_type = args.type
+    data_file = args.data
+    output_file = args.output
+    title = args.title or "Chart"
+    width = args.width
+    height = args.height
+    style = args.style
+    interactive = args.interactive
+
+    # Check matplotlib availability
+    if interactive:
+        try:
+            import plotly.graph_objects as go
+        except ImportError:
+            print("[!] plotly not installed. Install with: pip install plotly")
+            print("    Falling back to matplotlib (static image)")
+            interactive = False
+
+    try:
+        import matplotlib
+        matplotlib.use("Agg")  # Non-interactive backend
+        import matplotlib.pyplot as plt
+        import matplotlib.font_manager as fm
+        import numpy as np
+    except ImportError:
+        print("[!] matplotlib not installed. Install with: pip install matplotlib numpy")
+        return
+
+    # Apply style
+    style_map = {
+        "default": "default",
+        "dark": "dark_background",
+        "ggplot": "ggplot",
+        "seaborn": "seaborn-v0_8",
+        "bmh": "bmh",
+    }
+    plt.style.use(style_map.get(style, "default"))
+
+    # Load data
+    if data_file:
+        data = _load_chart_data(data_file)
+        if data is None:
+            return
+    else:
+        # Demo data
+        data = _demo_data()
+
+    print(f"\n[+] Generating {chart_type} chart...")
+    print(f"  Output: {output_file}")
+    print(f"  Size: {width}x{height}")
+    print(f"  Style: {style}")
+
+    # Handle Chinese font
+    _setup_fonts(plt)
+
+    if interactive:
+        fig = _generate_plotly_chart(chart_type, data, title, args)
+        if output_file.endswith(".html"):
+            fig.write_html(output_file)
+        else:
+            fig.write_image(output_file, width=width, height=height)
+        print(f"  [OK] Interactive chart saved to {output_file}")
+    else:
+        fig, ax = plt.subplots(figsize=(width / 100, height / 100), dpi=100)
+        _generate_chart(plt, ax, chart_type, data, title, args)
+
+        # Save
+        plt.tight_layout()
+        plt.savefig(output_file, dpi=100, bbox_inches="tight",
+                    facecolor="white", edgecolor="none")
+        plt.close(fig)
+        print(f"  [OK] Chart saved to {output_file}")
+
+
+def _setup_fonts(plt):
+    """Setup fonts for CJK support."""
+    import matplotlib.font_manager as fm
+    # Try to find a font that supports CJK
+    for font_name in ["SimHei", "Microsoft YaHei", "WenQuanYi Micro Hei",
+                       "Noto Sans CJK", "Arial Unicode MS"]:
+        font_path = fm.findfont(fm.FontProperties(family=font_name))
+        if font_path and "LastResort" not in font_path:
+            plt.rcParams["font.sans-serif"] = [font_name, "DejaVu Sans"]
+            plt.rcParams["axes.unicode_minus"] = False
+            return
+
+
+def _load_chart_data(filepath):
+    """Load data from JSON or CSV file."""
+    ext = os.path.splitext(filepath)[1].lower()
+
+    try:
+        if ext == ".json":
+            with open(filepath, "r", encoding="utf-8") as f:
+                raw = json.load(f)
+
+            # Support different JSON structures
+            if isinstance(raw, dict):
+                # {labels: [...], values: [...]}
+                if "labels" in raw and "values" in raw:
+                    return raw
+                # {series: [{name, data}, ...]}
+                if "series" in raw:
+                    return raw
+                # Arbitrary dict -> keys as labels, values as data
+                return {"labels": list(raw.keys()), "values": list(raw.values())}
+            elif isinstance(raw, list):
+                # List of dicts with consistent keys
+                if raw and isinstance(raw[0], dict):
+                    labels = list(raw[0].keys())
+                    values = [list(row.values()) for row in raw]
+                    return {"labels": labels, "values": values, "rows": raw}
+                # Simple list of numbers
+                return {"labels": [str(i) for i in range(len(raw))], "values": raw}
+            return raw
+
+        elif ext == ".csv":
+            import csv
+            with open(filepath, "r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                rows = list(reader)
+
+            if rows:
+                labels = list(rows[0].keys())
+                values = [list(row.values()) for row in rows]
+                return {"labels": labels, "values": values, "rows": rows}
+        else:
+            print(f"  [ERROR] Unsupported data format: {ext}")
+            return None
+
+    except Exception as e:
+        print(f"  [ERROR] Failed to load data: {e}")
+        return None
+
+
+def _demo_data():
+    """Generate demo data for chart preview."""
+    return {
+        "labels": ["Password Policy", "Network Security", "Web Security",
+                    "System Admin", "Physical Security", "Social Engineering"],
+        "values": [85, 72, 90, 65, 55, 78],
+    }
+
+
+def _generate_chart(plt, ax, chart_type, data, title, args):
+    """Generate a matplotlib chart."""
+    labels = data.get("labels", [])
+    values = data.get("values", [])
+    colors = None
+    if args.color:
+        colors = args.color.split(",")
+
+    xlabel = args.xlabel or ""
+    ylabel = args.ylabel or ""
+    show_grid = not args.no_grid
+    show_legend = args.legend
+
+    if chart_type == "bar":
+        if isinstance(values[0], (list, tuple)) if values else False:
+            # Multi-series bar chart
+            x = np.arange(len(labels))
+            width = 0.8 / len(values)
+            for i, vals in enumerate(values):
+                offset = (i - len(values) / 2 + 0.5) * width
+                ax.bar(x + offset, vals, width=width, label=f"Series {i+1}")
+            ax.set_xticks(x)
+            ax.set_xticklabels(labels, rotation=45, ha="right")
+        else:
+            ax.bar(labels, values, color=colors)
+            ax.tick_params(axis="x", rotation=45)
+
+        ax.set_title(title, fontsize=16, fontweight="bold")
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel or "Value")
+        ax.grid(show_grid, axis="y", alpha=0.3)
+
+    elif chart_type == "line":
+        if isinstance(values[0], (list, tuple)) if values else False:
+            for i, vals in enumerate(values):
+                ax.plot(labels, vals, marker="o", label=f"Series {i+1}")
+        else:
+            ax.plot(labels, values, marker="o", linewidth=2, markersize=8, color=colors[0] if colors else None)
+            ax.fill_between(labels, values, alpha=0.15)
+
+        ax.set_title(title, fontsize=16, fontweight="bold")
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel or "Value")
+        ax.grid(show_grid, alpha=0.3)
+
+    elif chart_type == "pie":
+        wedges, texts, autotexts = ax.pie(
+            values, labels=labels, autopct="%1.1f%%",
+            colors=colors, startangle=90,
+            textprops={"fontsize": 10}
+        )
+        ax.set_title(title, fontsize=16, fontweight="bold")
+
+    elif chart_type == "scatter":
+        if isinstance(values[0], (list, tuple)) if values else False:
+            x_vals = values[0]
+            y_vals = values[1] if len(values) > 1 else values[0]
+        else:
+            x_vals = range(len(values))
+            y_vals = values
+        ax.scatter(x_vals, y_vals, s=100, alpha=0.7, color=colors[0] if colors else None)
+        ax.set_title(title, fontsize=16, fontweight="bold")
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel or "Value")
+        ax.grid(show_grid, alpha=0.3)
+
+    elif chart_type == "histogram":
+        ax.hist(values, bins=20, color=colors[0] if colors else "steelblue",
+                edgecolor="white", alpha=0.8)
+        ax.set_title(title, fontsize=16, fontweight="bold")
+        ax.set_xlabel(xlabel or "Value")
+        ax.set_ylabel(ylabel or "Frequency")
+        ax.grid(show_grid, axis="y", alpha=0.3)
+
+    elif chart_type == "heatmap":
+        import numpy as np
+        if isinstance(values[0], (list, tuple)) if values else False:
+            matrix = np.array(values, dtype=float)
+        else:
+            size = int(len(values) ** 0.5)
+            matrix = np.array(values[:size*size], dtype=float).reshape(size, size)
+
+        im = ax.imshow(matrix, cmap="YlOrRd", aspect="auto")
+        ax.set_xticks(range(len(labels)))
+        ax.set_xticklabels(labels, rotation=45, ha="right")
+        ax.set_title(title, fontsize=16, fontweight="bold")
+        plt.colorbar(im, ax=ax)
+
+    elif chart_type == "radar":
+        import numpy as np
+        if not labels:
+            return
+        n = len(labels)
+        angles = np.linspace(0, 2 * np.pi, n, endpoint=False).tolist()
+        angles += angles[:1]
+
+        vals = values + values[:1] if not isinstance(values[0], (list, tuple)) else values
+
+        ax.remove()
+        ax = plt.subplot(111, polar=True)
+
+        if isinstance(values[0], (list, tuple)):
+            for i, v in enumerate(values):
+                v_closed = v + v[:1]
+                ax.plot(angles, v_closed, "o-", linewidth=2, label=f"Series {i+1}")
+                ax.fill(angles, v_closed, alpha=0.1)
+        else:
+            vals_closed = values + values[:1]
+            ax.plot(angles, vals_closed, "o-", linewidth=2, color=colors[0] if colors else None)
+            ax.fill(angles, vals_closed, alpha=0.25)
+
+        ax.set_xticks(angles[:-1])
+        ax.set_xticklabels(labels)
+        ax.set_title(title, fontsize=16, fontweight="bold", y=1.08)
+
+    elif chart_type == "treemap":
+        try:
+            import squarify
+            squarify.plot(sizes=values, label=labels, alpha=0.8,
+                         color=colors or None, text_kwargs={"fontsize": 9})
+            ax.set_title(title, fontsize=16, fontweight="bold")
+            ax.axis("off")
+        except ImportError:
+            print("  [!] squarify not installed. Install with: pip install squarify")
+            print("    Falling back to bar chart")
+            ax.bar(labels, values, color=colors)
+            ax.set_title(title, fontsize=16, fontweight="bold")
+
+    elif chart_type == "bubble":
+        import numpy as np
+        if isinstance(values[0], (list, tuple)) if values else False:
+            x_vals = values[0]
+            y_vals = values[1] if len(values) > 1 else values[0]
+            sizes = values[2] if len(values) > 2 else [100] * len(x_vals)
+        else:
+            x_vals = range(len(values))
+            y_vals = values
+            sizes = [v * 2 for v in values]
+
+        ax.scatter(x_vals, y_vals, s=sizes, alpha=0.6,
+                   color=colors[0] if colors else None, edgecolors="grey", linewidth=0.5)
+        ax.set_title(title, fontsize=16, fontweight="bold")
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.grid(show_grid, alpha=0.3)
+
+    if show_legend:
+        ax.legend()
+
+    return ax
+
+
+def _generate_plotly_chart(chart_type, data, title, args):
+    """Generate a plotly interactive chart."""
+    import plotly.graph_objects as go
+
+    labels = data.get("labels", [])
+    values = data.get("values", [])
+
+    if chart_type == "bar":
+        fig = go.Figure(data=[go.Bar(x=labels, y=values)])
+    elif chart_type == "line":
+        fig = go.Figure(data=[go.Scatter(x=labels, y=values, mode="lines+markers",
+                                          fill="tozeroy")])
+    elif chart_type == "pie":
+        fig = go.Figure(data=[go.Pie(labels=labels, values=values)])
+    elif chart_type == "scatter":
+        fig = go.Figure(data=[go.Scatter(x=labels, y=values, mode="markers",
+                                          marker=dict(size=15))])
+    elif chart_type == "heatmap":
+        import numpy as np
+        if isinstance(values[0], (list, tuple)) if values else False:
+            matrix = np.array(values, dtype=float)
+        else:
+            size = int(len(values) ** 0.5)
+            matrix = np.array(values[:size*size], dtype=float).reshape(size, size)
+        fig = go.Figure(data=[go.Heatmap(z=matrix, x=labels, y=labels,
+                                          colorscale="YlOrRd")])
+    elif chart_type == "radar":
+        fig = go.Figure(data=[go.Scatterpolar(r=values, theta=labels, fill="toself")])
+    else:
+        fig = go.Figure(data=[go.Bar(x=labels, y=values)])
+
+    fig.update_layout(title=title, width=args.width, height=args.height)
+    return fig
+
+
+def cmd_export(args):
+    """Export data and reports to various formats."""
+    input_file = args.input
+    output_file = args.output
+    fmt = args.format
+    title = args.title or "Export Report"
+    include_charts = args.include_charts
+    include_graph = args.include_graph
+    embed_images = args.embed_images
+
+    # Auto-detect format from extension
+    if not fmt:
+        ext = os.path.splitext(output_file)[1].lower().lstrip(".")
+        fmt_map = {"png": "png", "svg": "svg", "pdf": "pdf",
+                   "html": "html", "docx": "docx", "xlsx": "xlsx", "pptx": "pptx"}
+        fmt = fmt_map.get(ext)
+        if not fmt:
+            print(f"[!] Cannot determine format from extension '.{ext}'")
+            print("    Use --format to specify: png, svg, pdf, html, docx, xlsx, pptx")
+            return
+
+    print(f"\n[+] Exporting...")
+    print(f"  Input: {input_file}")
+    print(f"  Output: {output_file}")
+    print(f"  Format: {fmt}")
+
+    if not os.path.exists(input_file):
+        print(f"  [ERROR] Input file not found: {input_file}")
+        return
+
+    # Load input data
+    try:
+        data = _load_export_data(input_file)
+    except Exception as e:
+        print(f"  [ERROR] Failed to load input: {e}")
+        return
+
+    # Generate charts if requested
+    chart_images = []
+    if include_charts:
+        chart_images = _generate_export_charts(data, title, embed_images)
+
+    # Export based on format
+    try:
+        if fmt == "png" or fmt == "svg" or fmt == "pdf":
+            _export_image(data, output_file, fmt, title, chart_images, width=args.width if hasattr(args, 'width') else 1200)
+
+        elif fmt == "html":
+            _export_html_report(data, output_file, title, chart_images, include_graph, embed_images)
+
+        elif fmt == "pdf":
+            _export_pdf_report(data, output_file, title, chart_images)
+
+        elif fmt == "docx":
+            _export_docx(data, output_file, title, chart_images)
+
+        elif fmt == "xlsx":
+            _export_xlsx(data, output_file, title)
+
+        elif fmt == "pptx":
+            _export_pptx(data, output_file, title, chart_images)
+
+        print(f"  [OK] Exported to {output_file}")
+
+    except Exception as e:
+        print(f"  [ERROR] Export failed: {e}")
+
+
+def _load_export_data(filepath):
+    """Load data for export."""
+    ext = os.path.splitext(filepath)[1].lower()
+
+    if ext == ".json":
+        with open(filepath, "r", encoding="utf-8") as f:
+            return json.load(f)
+    elif ext == ".csv":
+        import csv
+        with open(filepath, "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            return {"type": "table", "rows": list(reader)}
+    elif ext in (".yaml", ".yml"):
+        import yaml
+        with open(filepath, "r", encoding="utf-8") as f:
+            return yaml.safe_load(f)
+    else:
+        with open(filepath, "r", encoding="utf-8") as f:
+            return {"content": f.read()}
+
+
+def _generate_export_charts(data, title, embed_images):
+    """Generate chart images for embedding in reports."""
+    charts = []
+
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        import numpy as np
+
+        _setup_fonts(plt)
+
+        # Generate vulnerability severity chart if data looks like pentest results
+        findings = data.get("findings", data.get("vulnerabilities", []))
+        if findings:
+            # Severity distribution
+            severities = {}
+            for f in findings:
+                sev = f.get("severity", "info") if isinstance(f, dict) else "info"
+                severities[sev] = severities.get(sev, 0) + 1
+
+            if severities:
+                fig, ax = plt.subplots(figsize=(8, 5))
+                colors = {"critical": "#e74c3c", "high": "#e67e22", "medium": "#f1c40f",
+                          "low": "#2ecc71", "info": "#3498db"}
+                bar_colors = [colors.get(s, "#95a5a6") for s in severities.keys()]
+                ax.bar(severities.keys(), severities.values(), color=bar_colors)
+                ax.set_title("Vulnerability Severity Distribution", fontsize=14, fontweight="bold")
+                ax.set_ylabel("Count")
+                ax.grid(axis="y", alpha=0.3)
+
+                buf = _chart_to_base64(fig) if embed_images else None
+                charts.append({
+                    "title": "Vulnerability Severity Distribution",
+                    "type": "bar",
+                    "data": severities,
+                    "base64": buf,
+                })
+                plt.close(fig)
+
+        # Generate category chart
+        categories = data.get("categories", data.get("technologies", {}))
+        if categories and isinstance(categories, dict):
+            fig, ax = plt.subplots(figsize=(8, 5))
+            ax.pie(categories.values(), labels=categories.keys(), autopct="%1.1f%%")
+            ax.set_title("Category Distribution", fontsize=14, fontweight="bold")
+
+            buf = _chart_to_base64(fig) if embed_images else None
+            charts.append({
+                "title": "Category Distribution",
+                "type": "pie",
+                "data": categories,
+                "base64": buf,
+            })
+            plt.close(fig)
+
+    except ImportError:
+        pass
+
+    return charts
+
+
+def _chart_to_base64(fig):
+    """Convert matplotlib figure to base64 string."""
+    import base64
+    from io import BytesIO
+
+    buf = BytesIO()
+    fig.savefig(buf, format="png", dpi=100, bbox_inches="tight",
+                facecolor="white", edgecolor="none")
+    buf.seek(0)
+    return base64.b64encode(buf.read()).decode("utf-8")
+
+
+def _export_image(data, output_file, fmt, title, charts, width=1200):
+    """Export as static image (PNG/SVG/PDF)."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    _setup_fonts(plt)
+
+    n_charts = max(len(charts), 1)
+    fig, axes = plt.subplots(n_charts, 1, figsize=(width / 100, 5 * n_charts), dpi=100)
+    if n_charts == 1:
+        axes = [axes]
+
+    if charts:
+        for i, chart in enumerate(charts):
+            ax = axes[i]
+            chart_data = chart.get("data", {})
+            if chart.get("type") == "bar":
+                ax.bar(chart_data.keys(), chart_data.values(), color="steelblue")
+            elif chart.get("type") == "pie":
+                ax.pie(chart_data.values(), labels=chart_data.keys(), autopct="%1.1f%%")
+            ax.set_title(chart.get("title", ""), fontsize=14, fontweight="bold")
+    else:
+        # Render data as text table
+        ax = axes[0]
+        ax.axis("off")
+        if isinstance(data, dict):
+            text = "\n".join(f"{k}: {v}" for k, v in data.items())
+        else:
+            text = str(data)
+        ax.text(0.1, 0.9, text, transform=ax.transAxes, fontsize=10,
+                verticalalignment="top", fontfamily="monospace")
+        ax.set_title(title, fontsize=14, fontweight="bold")
+
+    plt.tight_layout()
+    plt.savefig(output_file, dpi=100, bbox_inches="tight",
+                facecolor="white", edgecolor="none")
+    plt.close(fig)
+
+
+def _export_html_report(data, output_file, title, charts, include_graph, embed_images):
+    """Export as HTML report with embedded charts."""
+    html_parts = [
+        "<!DOCTYPE html>",
+        "<html lang='en'><head>",
+        "<meta charset='UTF-8'>",
+        f"<title>{title}</title>",
+        "<style>",
+        "body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; "
+        "max-width: 1200px; margin: 0 auto; padding: 20px; background: #f5f5f5; }",
+        "h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; }",
+        "h2 { color: #34495e; margin-top: 30px; }",
+        "table { width: 100%; border-collapse: collapse; margin: 15px 0; background: white; }",
+        "th { background: #2c3e50; color: white; padding: 12px; text-align: left; }",
+        "td { padding: 10px 12px; border-bottom: 1px solid #ecf0f1; }",
+        "tr:nth-child(even) { background: #f9f9f9; }",
+        ".chart-container { background: white; padding: 15px; margin: 15px 0; "
+        "border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center; }",
+        ".chart-container img { max-width: 100%; height: auto; }",
+        ".severity-critical { color: #e74c3c; font-weight: bold; }",
+        ".severity-high { color: #e67e22; font-weight: bold; }",
+        ".severity-medium { color: #f1c40f; font-weight: bold; }",
+        ".severity-low { color: #2ecc71; font-weight: bold; }",
+        ".summary { background: white; padding: 20px; border-radius: 8px; margin: 15px 0; "
+        "box-shadow: 0 2px 4px rgba(0,0,0,0.1); }",
+        ".footer { text-align: center; color: #7f8c8d; margin-top: 30px; padding: 20px; }",
+        "</style>",
+        "</head><body>",
+        f"<h1>{title}</h1>",
+        f"<p>Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>",
+    ]
+
+    # Summary section
+    html_parts.append('<div class="summary"><h2>Summary</h2>')
+    if isinstance(data, dict):
+        findings = data.get("findings", data.get("vulnerabilities", []))
+        html_parts.append(f"<p>Total findings: {len(findings)}</p>")
+
+        if findings:
+            sev_counts = {}
+            for f in findings:
+                sev = f.get("severity", "info") if isinstance(f, dict) else "info"
+                sev_counts[sev] = sev_counts.get(sev, 0) + 1
+            html_parts.append("<p>Severity breakdown: ")
+            for sev, count in sev_counts.items():
+                html_parts.append(
+                    f'<span class="severity-{sev}">{sev.upper()}: {count}</span> | '
+                )
+            html_parts.append("</p>")
+    html_parts.append('</div>')
+
+    # Charts
+    if charts:
+        html_parts.append('<h2>Charts</h2>')
+        for chart in charts:
+            html_parts.append('<div class="chart-container">')
+            html_parts.append(f'<h3>{chart.get("title", "Chart")}</h3>')
+            if chart.get("base64"):
+                html_parts.append(
+                    f'<img src="data:image/png;base64,{chart["base64"]}" '
+                    f'alt="{chart.get("title", "Chart")}">'
+                )
+            else:
+                # Render as HTML table
+                chart_data = chart.get("data", {})
+                html_parts.append('<table>')
+                for k, v in chart_data.items():
+                    html_parts.append(f'<tr><td>{k}</td><td>{v}</td></tr>')
+                html_parts.append('</table>')
+            html_parts.append('</div>')
+
+    # Findings table
+    findings = data.get("findings", data.get("vulnerabilities", []))
+    if findings:
+        html_parts.append('<h2>Findings</h2>')
+        html_parts.append('<table><tr><th>#</th><th>Title</th><th>Severity</th>'
+                          '<th>Description</th></tr>')
+        for i, f in enumerate(findings, 1):
+            if isinstance(f, dict):
+                sev = f.get("severity", "info")
+                html_parts.append(
+                    f'<tr><td>{i}</td><td>{f.get("title", "N/A")}</td>'
+                    f'<td class="severity-{sev}">{sev.upper()}</td>'
+                    f'<td>{f.get("description", "")[:200]}</td></tr>'
+                )
+        html_parts.append('</table>')
+
+    # Attack graph
+    if include_graph:
+        html_parts.append('<h2>Attack Graph</h2>')
+        try:
+            from attack_graph.visualization import AttackGraphVisualizer
+            viz = AttackGraphVisualizer()
+            graph_html = viz.to_html()
+            # Extract the body content from the graph HTML
+            if "<body>" in graph_html:
+                body = graph_html.split("<body>")[1].split("</body>")[0]
+                html_parts.append(body)
+            else:
+                html_parts.append(graph_html)
+        except Exception:
+            html_parts.append('<p>Attack graph not available</p>')
+
+    # Raw data
+    html_parts.append('<h2>Raw Data</h2>')
+    html_parts.append(f'<pre>{json.dumps(data, indent=2, default=str)[:5000]}</pre>')
+
+    html_parts.append('<div class="footer">')
+    html_parts.append(f'<p>Password Guesser Report - {datetime.now().strftime("%Y-%m-%d")}</p>')
+    html_parts.append('</div>')
+    html_parts.append('</body></html>')
+
+    with open(output_file, "w", encoding="utf-8") as f:
+        f.write("\n".join(html_parts))
+
+
+def _export_pdf_report(data, output_file, title, charts):
+    """Export as PDF report."""
+    # First generate HTML, then try to convert
+    html_file = output_file.replace(".pdf", "_temp.html")
+
+    try:
+        _export_html_report(data, html_file, title, charts, False, True)
+
+        # Try weasyprint
+        try:
+            from weasyprint import HTML
+            HTML(filename=html_file).write_pdf(output_file)
+            os.unlink(html_file)
+            return
+        except ImportError:
+            pass
+
+        # Try pdfkit
+        try:
+            import pdfkit
+            pdfkit.from_file(html_file, output_file)
+            os.unlink(html_file)
+            return
+        except ImportError:
+            pass
+
+        # Fallback: keep HTML and warn
+        print(f"  [WARN] PDF libraries not installed (weasyprint/pdfkit)")
+        print(f"  HTML report saved to: {html_file}")
+        print(f"  Install: pip install weasyprint")
+
+    except Exception as e:
+        print(f"  [ERROR] PDF export failed: {e}")
+        if os.path.exists(html_file):
+            print(f"  HTML report available: {html_file}")
+
+
+def _export_docx(data, output_file, title, charts):
+    """Export as DOCX (Word document)."""
+    try:
+        from docx import Document
+        from docx.shared import Inches, Pt
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+    except ImportError:
+        print("  [ERROR] python-docx not installed. Install with: pip install python-docx")
+        return
+
+    doc = Document()
+
+    # Title
+    heading = doc.add_heading(title, level=0)
+    heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    doc.add_paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
+    # Summary
+    doc.add_heading("Summary", level=1)
+    if isinstance(data, dict):
+        findings = data.get("findings", data.get("vulnerabilities", []))
+        doc.add_paragraph(f"Total findings: {len(findings)}")
+
+    # Charts as images
+    if charts:
+        doc.add_heading("Charts", level=1)
+        for chart in charts:
+            if chart.get("base64"):
+                import base64
+                from io import BytesIO
+                img_data = base64.b64decode(chart["base64"])
+                buf = BytesIO(img_data)
+                try:
+                    doc.add_picture(buf, width=Inches(6))
+                except Exception:
+                    doc.add_paragraph(f"[Chart: {chart.get('title', 'Chart')}]")
+                doc.add_paragraph()
+
+    # Findings table
+    findings = data.get("findings", data.get("vulnerabilities", []))
+    if findings:
+        doc.add_heading("Findings", level=1)
+        table = doc.add_table(rows=1, cols=4)
+        table.style = "Light Grid Accent 1"
+        hdr = table.rows[0].cells
+        hdr[0].text = "#"
+        hdr[1].text = "Title"
+        hdr[2].text = "Severity"
+        hdr[3].text = "Description"
+
+        for i, f in enumerate(findings, 1):
+            if isinstance(f, dict):
+                row = table.add_row().cells
+                row[0].text = str(i)
+                row[1].text = f.get("title", "N/A")
+                row[2].text = f.get("severity", "info").upper()
+                row[3].text = f.get("description", "")[:200]
+
+    # Raw data
+    doc.add_heading("Raw Data", level=1)
+    doc.add_paragraph(json.dumps(data, indent=2, default=str)[:3000])
+
+    doc.save(output_file)
+
+
+def _export_xlsx(data, output_file, title):
+    """Export as Excel spreadsheet."""
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment
+    except ImportError:
+        print("  [ERROR] openpyxl not installed. Install with: pip install openpyxl")
+        return
+
+    wb = Workbook()
+
+    # Summary sheet
+    ws = wb.active
+    ws.title = "Summary"
+    ws["A1"] = title
+    ws["A1"].font = Font(bold=True, size=16)
+    ws["A2"] = f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+
+    # Findings sheet
+    findings = data.get("findings", data.get("vulnerabilities", []))
+    if findings:
+        ws2 = wb.create_sheet("Findings")
+        headers = ["#", "Title", "Severity", "Description"]
+        for col, header in enumerate(headers, 1):
+            cell = ws2.cell(row=1, column=col, value=header)
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill(start_color="2C3E50", end_color="2C3E50", fill_type="solid")
+
+        for i, f in enumerate(findings, 2):
+            if isinstance(f, dict):
+                ws2.cell(row=i, column=1, value=i - 1)
+                ws2.cell(row=i, column=2, value=f.get("title", "N/A"))
+                ws2.cell(row=i, column=3, value=f.get("severity", "info"))
+                ws2.cell(row=i, column=4, value=f.get("description", ""))
+
+        # Adjust column widths
+        ws2.column_dimensions["A"].width = 5
+        ws2.column_dimensions["B"].width = 30
+        ws2.column_dimensions["C"].width = 15
+        ws2.column_dimensions["D"].width = 50
+
+    # Raw data sheet
+    if isinstance(data, dict):
+        ws3 = wb.create_sheet("Raw Data")
+        for i, (k, v) in enumerate(data.items(), 1):
+            ws3.cell(row=i, column=1, value=k)
+            ws3.cell(row=i, column=2, value=str(v)[:32000])
+            ws3.cell(row=i, column=1).font = Font(bold=True)
+        ws3.column_dimensions["A"].width = 25
+        ws3.column_dimensions["B"].width = 60
+
+    wb.save(output_file)
+
+
+def _export_pptx(data, output_file, title, charts):
+    """Export as PowerPoint presentation."""
+    try:
+        from pptx import Presentation
+        from pptx.util import Inches, Pt
+    except ImportError:
+        print("  [ERROR] python-pptx not installed. Install with: pip install python-pptx")
+        return
+
+    prs = Presentation()
+    prs.slide_width = Inches(13.333)
+    prs.slide_height = Inches(7.5)
+
+    # Title slide
+    slide = prs.slides.add_slide(prs.slide_layouts[0])
+    slide.shapes.title.text = title
+    slide.placeholders[1].text = f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+
+    # Summary slide
+    slide = prs.slides.add_slide(prs.slide_layouts[1])
+    slide.shapes.title.text = "Summary"
+    if isinstance(data, dict):
+        findings = data.get("findings", data.get("vulnerabilities", []))
+        body = slide.placeholders[1]
+        tf = body.text_frame
+        tf.text = f"Total findings: {len(findings)}"
+
+        if findings:
+            sev_counts = {}
+            for f in findings:
+                sev = f.get("severity", "info") if isinstance(f, dict) else "info"
+                sev_counts[sev] = sev_counts.get(sev, 0) + 1
+            for sev, count in sev_counts.items():
+                p = tf.add_paragraph()
+                p.text = f"  {sev.upper()}: {count}"
+
+    # Chart slides
+    for chart in charts:
+        slide = prs.slides.add_slide(prs.slide_layouts[1])
+        slide.shapes.title.text = chart.get("title", "Chart")
+
+        if chart.get("base64"):
+            import base64
+            from io import BytesIO
+            img_data = base64.b64decode(chart["base64"])
+            buf = BytesIO(img_data)
+            try:
+                slide.shapes.add_picture(buf, Inches(1.5), Inches(1.5), Inches(10))
+            except Exception:
+                pass
+
+    # Findings slide
+    findings = data.get("findings", data.get("vulnerabilities", []))
+    if findings:
+        slide = prs.slides.add_slide(prs.slide_layouts[1])
+        slide.shapes.title.text = "Key Findings"
+        body = slide.placeholders[1]
+        tf = body.text_frame
+        for f in findings[:10]:
+            if isinstance(f, dict):
+                p = tf.add_paragraph()
+                p.text = f"[{f.get('severity', 'info').upper()}] {f.get('title', 'N/A')}"
+
+    prs.save(output_file)
+
+
+def cmd_report(args):
+    """Generate pentest report."""
+    session_file = args.session
+    output_file = args.output
+    fmt = args.format
+    include_charts = getattr(args, "include_charts", False)
+    include_graph = getattr(args, "include_graph", False)
+    chart_type = getattr(args, "chart_type", "bar")
+    template = getattr(args, "template", "default")
+
+    if not os.path.exists(session_file):
+        print(f"[!] Session file not found: {session_file}")
+        return
+
+    print(f"\n[+] Generating report...")
+    print(f"  Session: {session_file}")
+    print(f"  Output: {output_file}")
+    print(f"  Format: {fmt}")
+
+    # Load session data
+    try:
+        with open(session_file, "r", encoding="utf-8") as f:
+            session_data = json.load(f)
+    except Exception as e:
+        print(f"  [ERROR] Failed to load session: {e}")
+        return
+
+    # Generate charts if requested
+    chart_images = []
+    if include_charts:
+        chart_images = _generate_export_charts(session_data, "Pentest Report", embed_images=True)
+        print(f"  Generated {len(chart_images)} charts")
+
+    if fmt in ("json",):
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(session_data, f, indent=2, default=str)
+
+    elif fmt in ("markdown", "md"):
+        report_md = _generate_markdown_report(session_data, chart_images, template)
+        with open(output_file, "w", encoding="utf-8") as f:
+            f.write(report_md)
+
+    elif fmt == "html":
+        _export_html_report(session_data, output_file, "Penetration Test Report",
+                           chart_images, include_graph, True)
+
+    elif fmt == "pdf":
+        _export_pdf_report(session_data, output_file, "Penetration Test Report", chart_images)
+
+    elif fmt == "pptx":
+        _export_pptx(session_data, output_file, "Penetration Test Report", chart_images)
+
+    print(f"  [OK] Report saved to {output_file}")
+
+
+def _generate_markdown_report(data, charts, template="default"):
+    """Generate markdown report."""
+    lines = [
+        "# Penetration Test Report",
+        f"\n**Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        f"**Template:** {template}",
+        "\n---\n",
+    ]
+
+    if template == "executive":
+        lines.append("## Executive Summary\n")
+        findings = data.get("findings", [])
+        lines.append(f"This report covers **{len(findings)}** security findings.\n")
+
+        if findings:
+            critical = sum(1 for f in findings if isinstance(f, dict) and f.get("severity") == "critical")
+            high = sum(1 for f in findings if isinstance(f, dict) and f.get("severity") == "high")
+            lines.append(f"- Critical: {critical}")
+            lines.append(f"- High: {high}")
+            lines.append("")
+
+    # Summary
+    lines.append("## Summary\n")
+    for key, value in data.items():
+        if key not in ("findings", "vulnerabilities", "raw"):
+            lines.append(f"- **{key}:** {value}")
+    lines.append("")
+
+    # Charts
+    if charts:
+        lines.append("## Charts\n")
+        lines.append("*Charts are available in HTML/PDF export format*\n")
+
+    # Findings
+    findings = data.get("findings", data.get("vulnerabilities", []))
+    if findings:
+        lines.append("## Findings\n")
+        lines.append("| # | Title | Severity | Description |")
+        lines.append("|---|-------|----------|-------------|")
+        for i, f in enumerate(findings, 1):
+            if isinstance(f, dict):
+                lines.append(
+                    f"| {i} | {f.get('title', 'N/A')} | "
+                    f"{f.get('severity', 'info').upper()} | "
+                    f"{f.get('description', '')[:100]} |"
+                )
+        lines.append("")
+
+    lines.append("---\n")
+    lines.append("*Generated by Password Guesser CLI*\n")
+
+    return "\n".join(lines)
+
+
 def cmd_help(args):
     """Show help information for commands."""
     command = args.help_command
@@ -7109,6 +8141,48 @@ def cmd_help(args):
             "examples": [
                 "password-guesser output --format table",
                 "password-guesser output --format json -o result.json",
+            ]
+        },
+        "chart": {
+            "usage": "password-guesser chart --output <file> [options]",
+            "desc": "Generate charts and visualizations (bar, line, pie, heatmap, etc.).",
+            "options": {
+                "--type, -t": "Chart type: bar | line | pie | scatter | histogram | heatmap | radar | treemap | bubble",
+                "--data, -d": "Data file (JSON/CSV)",
+                "--output, -o": "Output file (png/svg/pdf/html)",
+                "--title": "Chart title",
+                "--xlabel": "X-axis label",
+                "--ylabel": "Y-axis label",
+                "--width": "Image width (default: 1200)",
+                "--height": "Image height (default: 800)",
+                "--style": "Chart style: default | dark | ggplot | seaborn",
+                "--color": "Color scheme (comma-separated)",
+                "--no-grid": "Hide grid lines",
+                "--legend": "Show legend",
+                "--interactive": "Generate interactive HTML (plotly)",
+            },
+            "examples": [
+                "password-guesser chart -d data.json -o chart.png --type bar",
+                "password-guesser chart -o pie.svg --type pie --title 'Severity Distribution'",
+                "password-guesser chart -o report.html --interactive",
+            ]
+        },
+        "export": {
+            "usage": "password-guesser export --input <file> --output <file> [options]",
+            "desc": "Export data and reports to various formats with embedded charts.",
+            "options": {
+                "--input, -i": "Input file (JSON/CSV/YAML)",
+                "--output, -o": "Output file path",
+                "--format, -f": "Format: png | svg | pdf | html | docx | xlsx | pptx",
+                "--title": "Document title",
+                "--include-charts": "Embed charts in export",
+                "--include-graph": "Embed attack graph visualization",
+                "--embed-images": "Embed images as base64",
+            },
+            "examples": [
+                "password-guesser export -i session.json -o report.pdf --include-charts",
+                "password-guesser export -i data.json -o presentation.pptx",
+                "password-guesser export -i findings.json -o report.html --include-graph",
             ]
         },
         "config": {

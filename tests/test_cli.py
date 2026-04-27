@@ -759,7 +759,7 @@ class TestCommandCount:
             "exploit", "payload", "session", "dns", "osint", "analyze", "llm",
             "graph", "evasion", "scope", "lessons", "reverse-shell", "listener",
             "network", "crypt", "api", "hashcat", "stego", "fuzz", "wifi", "db", "log",
-            "debug", "profile", "env", "pkg", "script", "data", "output", "doc", "help"
+            "debug", "profile", "env", "pkg", "script", "data", "output", "chart", "export", "doc", "help"
         ]
 
         for cmd in expected_commands:
@@ -1013,6 +1013,180 @@ class TestHelpCommand:
         )
         assert result.returncode == 0
         assert "No detailed help" in result.stdout
+
+
+class TestChartCommand:
+    """Test chart generation command."""
+
+    def test_chart_bar_default(self):
+        """Test bar chart with demo data."""
+        result = subprocess.run(
+            [sys.executable, "password_guesser/cli.py", "chart",
+             "-o", "test_bar.png", "--type", "bar", "--title", "Test Bar"],
+            capture_output=True, text=True,
+            cwd="D:/password_guesser"
+        )
+        assert result.returncode == 0
+        assert os.path.exists("D:/password_guesser/test_bar.png")
+        os.unlink("D:/password_guesser/test_bar.png")
+
+    def test_chart_pie(self):
+        """Test pie chart."""
+        result = subprocess.run(
+            [sys.executable, "password_guesser/cli.py", "chart",
+             "-o", "test_pie.png", "--type", "pie"],
+            capture_output=True, text=True,
+            cwd="D:/password_guesser"
+        )
+        assert result.returncode == 0
+        assert os.path.exists("D:/password_guesser/test_pie.png")
+        os.unlink("D:/password_guesser/test_pie.png")
+
+    def test_chart_line_svg(self):
+        """Test line chart with SVG output."""
+        result = subprocess.run(
+            [sys.executable, "password_guesser/cli.py", "chart",
+             "-o", "test_line.svg", "--type", "line"],
+            capture_output=True, text=True,
+            cwd="D:/password_guesser"
+        )
+        assert result.returncode == 0
+        assert os.path.exists("D:/password_guesser/test_line.svg")
+        os.unlink("D:/password_guesser/test_line.svg")
+
+    def test_chart_with_data_file(self):
+        """Test chart with JSON data file."""
+        import tempfile
+
+        chart_data = {"labels": ["A", "B", "C"], "values": [10, 20, 30]}
+        with tempfile.NamedTemporaryFile(suffix=".json", mode="w", delete=False, encoding="utf-8") as f:
+            json.dump(chart_data, f)
+            tmpfile = f.name
+
+        try:
+            result = subprocess.run(
+                [sys.executable, "password_guesser/cli.py", "chart",
+                 "-d", tmpfile, "-o", "test_data_chart.png", "--type", "bar"],
+                capture_output=True, text=True,
+                cwd="D:/password_guesser"
+            )
+            assert result.returncode == 0
+            assert os.path.exists("D:/password_guesser/test_data_chart.png")
+            os.unlink("D:/password_guesser/test_data_chart.png")
+        finally:
+            os.unlink(tmpfile)
+
+    def test_chart_help(self):
+        """Test chart help."""
+        result = subprocess.run(
+            [sys.executable, "password_guesser/cli.py", "chart", "--help"],
+            capture_output=True, text=True,
+            cwd="D:/password_guesser"
+        )
+        assert result.returncode == 0
+        assert "bar" in result.stdout
+        assert "pie" in result.stdout
+
+
+class TestExportCommand:
+    """Test export command."""
+
+    def test_export_html_with_charts(self):
+        """Test HTML export with charts."""
+        import tempfile
+
+        session_data = {
+            "findings": [
+                {"title": "SQL Injection", "severity": "critical", "description": "test"},
+                {"title": "XSS", "severity": "high", "description": "test"},
+            ],
+            "target": "192.168.1.100"
+        }
+        with tempfile.NamedTemporaryFile(suffix=".json", mode="w", delete=False, encoding="utf-8") as f:
+            json.dump(session_data, f)
+            tmpfile = f.name
+
+        try:
+            result = subprocess.run(
+                [sys.executable, "password_guesser/cli.py", "export",
+                 "-i", tmpfile, "-o", "test_export.html", "--include-charts", "--embed-images"],
+                capture_output=True, text=True,
+                cwd="D:/password_guesser"
+            )
+            assert result.returncode == 0
+            assert os.path.exists("D:/password_guesser/test_export.html")
+            # Verify HTML contains chart image
+            with open("D:/password_guesser/test_export.html", "r") as f:
+                content = f.read()
+            assert "data:image/png;base64" in content or "Chart" in content
+            os.unlink("D:/password_guesser/test_export.html")
+        finally:
+            os.unlink(tmpfile)
+
+    def test_export_help(self):
+        """Test export help."""
+        result = subprocess.run(
+            [sys.executable, "password_guesser/cli.py", "export", "--help"],
+            capture_output=True, text=True,
+            cwd="D:/password_guesser"
+        )
+        assert result.returncode == 0
+        assert "html" in result.stdout
+        assert "pdf" in result.stdout
+
+    def test_export_missing_input(self):
+        """Test export with missing input file."""
+        result = subprocess.run(
+            [sys.executable, "password_guesser/cli.py", "export",
+             "-i", "nonexistent.json", "-o", "out.html"],
+            capture_output=True, text=True,
+            cwd="D:/password_guesser"
+        )
+        assert result.returncode == 0
+        assert "not found" in result.stdout
+
+
+class TestReportCommand:
+    """Test enhanced report command."""
+
+    def test_report_markdown_with_charts(self):
+        """Test markdown report with charts."""
+        import tempfile
+
+        session_data = {
+            "findings": [
+                {"title": "SQL Injection", "severity": "critical", "description": "test"},
+            ],
+            "target": "10.0.0.1"
+        }
+        with tempfile.NamedTemporaryFile(suffix=".json", mode="w", delete=False, encoding="utf-8") as f:
+            json.dump(session_data, f)
+            tmpfile = f.name
+
+        try:
+            result = subprocess.run(
+                [sys.executable, "password_guesser/cli.py", "report",
+                 "-s", tmpfile, "-o", "test_report.md", "--include-charts"],
+                capture_output=True, text=True,
+                cwd="D:/password_guesser"
+            )
+            assert result.returncode == 0
+            assert os.path.exists("D:/password_guesser/test_report.md")
+            os.unlink("D:/password_guesser/test_report.md")
+        finally:
+            os.unlink(tmpfile)
+
+    def test_report_help(self):
+        """Test report help shows new options."""
+        result = subprocess.run(
+            [sys.executable, "password_guesser/cli.py", "report", "--help"],
+            capture_output=True, text=True,
+            cwd="D:/password_guesser"
+        )
+        assert result.returncode == 0
+        assert "include-charts" in result.stdout
+        assert "include-graph" in result.stdout
+        assert "template" in result.stdout
 
 
 if __name__ == "__main__":
