@@ -36,6 +36,7 @@ setup(
     entry_points={
         "console_scripts": [
             "password-guesser=password_guesser.cli:main",
+            "pg-shell=kali_terminal:main",
         ],
     },
     classifiers=[

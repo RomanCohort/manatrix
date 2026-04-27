@@ -78,6 +78,623 @@ password-guesser pentest \
 password-guesser status
 ```
 
+---
+
+## CLI 命令行完整参考
+
+本框架提供 **40 个** CLI 子命令，覆盖渗透测试全流程。
+
+### 命令概览
+
+```
+password-guesser <command> [options]
+```
+
+### 核心功能命令
+
+| 命令 | 别名 | 说明 |
+|------|------|------|
+| `train` | - | 训练 MAMBA 密码模型 |
+| `generate` | - | 生成密码候选 |
+| `web` | - | 启动 Web 界面 |
+| `pentest` | - | 运行渗透测试 |
+| `status` | - | 显示系统状态 |
+| `version` | - | 显示版本信息 |
+
+### 交互与分析命令
+
+| 命令 | 别名 | 说明 |
+|------|------|------|
+| `interactive` | `shell`, `kali` | Kali 风格交互终端 |
+| `evaluate` | `check` | 密码强度评估 |
+| `analyze` | - | AI 漏洞分析 |
+| `llm` | - | 直接与 LLM 交互 |
+
+### 侦察与扫描命令
+
+| 命令 | 说明 |
+|------|------|
+| `scan` | 网络扫描/侦察 |
+| `crawl` | Web 爬虫 |
+| `dns` | DNS 枚举 |
+| `osint` | OSINT 情报收集 |
+
+### 攻击与利用命令
+
+| 命令 | 说明 |
+|------|------|
+| `attack` | 攻击模式启动 |
+| `exploit` | 漏洞搜索与利用 |
+| `payload` | Payload 生成 |
+| `reverse-shell` | 反向 Shell 生成器 |
+
+### 会话与监听命令
+
+| 命令 | 说明 |
+|------|------|
+| `session` | 会话管理 |
+| `listener` | 监听器管理 |
+
+### 密码字典生成命令
+
+| 命令 | 说明 |
+|------|------|
+| `wordlist` | 字典生成 |
+| `rules` | 密码规则 |
+| `pcfg` | PCFG 概率生成 |
+| `augment` | 数据增强 |
+
+### AI/RL 训练命令
+
+| 命令 | 说明 |
+|------|------|
+| `rl` | 强化学习操作 |
+| `knowledge` | 知识库操作 |
+| `lessons` | 经验教训管理 |
+
+### 安全与规避命令
+
+| 命令 | 说明 |
+|------|------|
+| `evasion` | 规避技术管理 |
+| `adversarial` | 红蓝队对抗模拟 |
+| `sandbox` | 沙箱执行 |
+| `scope` | 授权范围管理 |
+
+### 工具与可视化命令
+
+| 命令 | 说明 |
+|------|------|
+| `tools` | 渗透工具管理 |
+| `graph` | 攻击图可视化 |
+
+### 实用工具命令
+
+| 命令 | 说明 |
+|------|------|
+| `hash` | 哈希计算 |
+| `encode` | 编码/解码 |
+| `config` | 配置管理 |
+| `report` | 报告生成 |
+| `benchmark` | 性能测试 |
+
+---
+
+### 命令详解与示例
+
+#### 训练命令 (train)
+
+```bash
+# 基本训练
+password-guesser train --data passwords.txt --epochs 100
+
+# 启用混合精度训练
+password-guesser train --data passwords.txt --amp --epochs 50
+
+# 从检查点恢复
+password-guesser train --data passwords.txt --resume checkpoints/model.pt
+
+# 完整参数
+password-guesser train \
+    --config config.yaml \
+    --data passwords.txt \
+    --epochs 100 \
+    --batch_size 64 \
+    --lr 0.001 \
+    --output checkpoints \
+    --amp \
+    --warmup_steps 1000 \
+    --gradient_checkpointing \
+    --early_stopping 10
+```
+
+#### 密码生成 (generate)
+
+```bash
+# 基本生成
+password-guesser generate --checkpoint best_model.pt
+
+# Beam Search 生成
+password-guesser generate --checkpoint best_model.pt --method beam --beam_width 5
+
+# 多样化生成
+password-guesser generate --checkpoint best_model.pt --method diverse_beam --n_samples 100
+
+# 基于目标信息生成
+password-guesser generate \
+    --checkpoint best_model.pt \
+    --target_file target_info.txt \
+    --method beam
+```
+
+#### 密码评估 (evaluate)
+
+```bash
+# 评估密码强度
+password-guesser evaluate --password "P@ssw0rd123!"
+
+# 详细分析
+password-guesser evaluate --password "MyP@ss2024" --detailed
+
+# 交互式输入
+password-guesser evaluate
+```
+
+#### 网络扫描 (scan)
+
+```bash
+# 完整扫描
+password-guesser scan --target 192.168.1.0/24 --type full
+
+# 端口扫描
+password-guesser scan --target 192.168.1.100 --type port --ports 1-65535
+
+# 漏洞扫描
+password-guesser scan --target 192.168.1.100 --type vuln
+
+# 保存结果
+password-guesser scan --target 192.168.1.0/24 --output scan_results.json
+```
+
+#### 攻击模式 (attack)
+
+```bash
+# 自主攻击
+password-guesser attack --target 192.168.1.100 --mode auto
+
+# 小组协作攻击
+password-guesser attack --target 192.168.1.100 --mode team --max_steps 50
+
+# 交互模式
+password-guesser attack --target 192.168.1.100 --mode interactive
+```
+
+#### Web 爬虫 (crawl)
+
+```bash
+# 基本爬取
+password-guesser crawl https://example.com
+
+# 深度爬取 + 漏洞扫描
+password-guesser crawl https://example.com --depth 5 --vuln_scan
+
+# 保存结果
+password-guesser crawl https://example.com --output crawl.json --max_pages 200
+```
+
+#### 漏洞利用 (exploit)
+
+```bash
+# 搜索漏洞
+password-guesser exploit --action search --query "log4j"
+password-guesser exploit --action search --query "smb"
+
+# 查看漏洞详情
+password-guesser exploit --action info --cve CVE-2021-44228
+
+# 检查目标漏洞
+password-guesser exploit --action check --target 192.168.1.100 --cve CVE-2021-44228
+
+# 运行漏洞利用
+password-guesser exploit --action run --exploit eternalblue --target 192.168.1.100
+```
+
+#### Payload 生成 (payload)
+
+```bash
+# 生成反向 Shell
+password-guesser payload --type reverse_shell_bash --lhost 192.168.1.50 --lport 4444
+
+# 生成 Python 反向 Shell
+password-guesser payload --type reverse_shell_python --lhost 192.168.1.50 --lport 4444
+
+# 生成 PowerShell 反向 Shell
+password-guesser payload --type reverse_shell_powershell --lhost 192.168.1.50 --lport 4444
+
+# 保存到文件
+password-guesser payload --type reverse_shell_bash --lhost 192.168.1.50 --lport 4444 --output payload.sh
+```
+
+#### 反向 Shell 生成器 (reverse-shell)
+
+```bash
+# 生成所有类型的反向 Shell
+password-guesser reverse-shell --lhost 192.168.1.50 --lport 4444 --type all
+
+# 生成特定类型
+password-guesser reverse-shell --lhost 192.168.1.50 --lport 4444 --type bash
+password-guesser reverse-shell --lhost 192.168.1.50 --lport 4444 --type python
+password-guesser reverse-shell --lhost 192.168.1.50 --lport 4444 --type powershell
+
+# Base64 编码
+password-guesser reverse-shell --lhost 192.168.1.50 --lport 4444 --type bash --encode
+```
+
+#### 会话管理 (session)
+
+```bash
+# 列出活跃会话
+password-guesser session --action list
+
+# 查看会话详情
+password-guesser session --action info --session_id 1
+
+# 终止会话
+password-guesser session --action kill --session_id 1
+```
+
+#### 监听器管理 (listener)
+
+```bash
+# 启动监听器
+password-guesser listener --action start --lport 4444 --type nc
+
+# 列出监听器
+password-guesser listener --action list
+
+# 停止监听器
+password-guesser listener --action stop --listener_id 1
+```
+
+#### DNS 枚举 (dns)
+
+```bash
+# 完整 DNS 枚举
+password-guesser dns example.com
+
+# 指定记录类型
+password-guesser dns example.com --type MX
+password-guesser dns example.com --type A
+password-guesser dns example.com --type TXT
+```
+
+#### OSINT 情报收集 (osint)
+
+```bash
+# 域名情报
+password-guesser osint --action domain example.com
+
+# 邮箱收集
+password-guesser osint --action email example.com
+
+# 用户名搜索
+password-guesser osint --action username admin
+
+# IP 情报
+password-guesser osint --action ip 8.8.8.8
+
+# 社交媒体
+password-guesser osint --action social admin
+```
+
+#### 密码字典生成 (wordlist)
+
+```bash
+# 基于模式生成
+password-guesser wordlist --output dict.txt --pattern "@@@2024" --count 1000
+
+# 使用不同方法
+password-guesser wordlist --output dict.txt --method markov --count 5000
+password-guesser wordlist --output dict.txt --method pcfg --count 5000
+password-guesser wordlist --output dict.txt --method hybrid --count 10000
+```
+
+#### 密码规则 (rules)
+
+```bash
+# 列出可用规则
+password-guesser rules --action list
+
+# 应用规则
+password-guesser rules --action apply --input passwords.txt --output rules_applied.txt
+
+# 生成 Hashcat 规则
+password-guesser rules --action generate --output rules.txt --count 100
+
+# 导出规则
+password-guesser rules --action export --output rules.txt --format hashcat
+```
+
+#### PCFG 生成 (pcfg)
+
+```bash
+# 训练 PCFG 模型
+password-guesser pcfg --action train --data passwords.txt --output pcfg_model.json
+
+# 生成密码
+password-guesser pcfg --action generate --model pcfg_model.json --count 1000
+
+# 查看统计
+password-guesser pcfg --action stats --model pcfg_model.json
+```
+
+#### 数据增强 (augment)
+
+```bash
+# 增强密码数据
+password-guesser augment --input passwords.txt --output augmented.txt
+
+# 指定方法
+password-guesser augment --input passwords.txt --output augmented.txt --methods leet suffix
+
+# 限制变体数量
+password-guesser augment --input passwords.txt --output augmented.txt --max_variants 5
+```
+
+#### 强化学习 (rl)
+
+```bash
+# 训练 RL Agent
+password-guesser rl --action train --episodes 100 --max_steps 50
+
+# 评估 Agent
+password-guesser rl --action evaluate --checkpoint agent.pt --episodes 10
+
+# 导出模型
+password-guesser rl --action export --checkpoint agent.pt --output model.onnx
+
+# 查看统计
+password-guesser rl --action stats
+```
+
+#### 知识库操作 (knowledge)
+
+```bash
+# 搜索知识
+password-guesser knowledge --action search --query "Log4Shell"
+
+# CVE 查询
+password-guesser knowledge --action cve --cve_id CVE-2021-44228
+
+# ATT&CK 技术查询
+password-guesser knowledge --action technique --technique_id T1190
+
+# 查看统计
+password-guesser knowledge --action stats
+
+# 导入/导出
+password-guesser knowledge --action export --file knowledge.json
+password-guesser knowledge --action import --file knowledge.json
+```
+
+#### 经验教训管理 (lessons)
+
+```bash
+# 列出教训
+password-guesser lessons --action list
+
+# 查看详情
+password-guesser lessons --action show --lesson_id L001
+
+# 导出
+password-guesser lessons --action export --output lessons.json
+
+# 导入
+password-guesser lessons --action import --input lessons.json
+```
+
+#### 规避技术 (evasion)
+
+```bash
+# 列出规避技术
+password-guesser evasion --action list
+
+# 应用规避级别
+password-guesser evasion --action apply --level high
+password-guesser evasion --action apply --level paranoid
+
+# 查看配置
+password-guesser evasion --action config
+```
+
+#### 红蓝队对抗 (adversarial)
+
+```bash
+# 红蓝对抗
+password-guesser adversarial --mode redblue --rounds 10
+
+# 红队模拟
+password-guesser adversarial --mode red --target 192.168.1.100
+
+# 蓝队模拟
+password-guesser adversarial --mode blue --target 192.168.1.100
+```
+
+#### 沙箱执行 (sandbox)
+
+```bash
+# 在沙箱中执行命令
+password-guesser sandbox --action run --command "nmap localhost" --timeout 60
+
+# Docker 沙箱
+password-guesser sandbox --action run --command "nmap localhost" --sandbox_type docker
+
+# 查看状态
+password-guesser sandbox --action status
+
+# 列出可用镜像
+password-guesser sandbox --action list
+
+# 清理资源
+password-guesser sandbox --action clean
+```
+
+#### 范围管理 (scope)
+
+```bash
+# 查看范围
+password-guesser scope --action show
+
+# 添加目标
+password-guesser scope --action add --target 192.168.1.0/24
+
+# 移除目标
+password-guesser scope --action remove --target 192.168.1.1
+
+# 检查目标
+password-guesser scope --action check --target 192.168.1.100
+```
+
+#### 攻击图 (graph)
+
+```bash
+# 可视化攻击图
+password-guesser graph --action visualize --session session.json --output graph.md
+
+# 导出攻击图
+password-guesser graph --action export --session session.json --output graph.json --format json
+
+# 查看统计
+password-guesser graph --action stats
+```
+
+#### 工具管理 (tools)
+
+```bash
+# 列出工具
+password-guesser tools --action list
+
+# 检查工具
+password-guesser tools --action check
+password-guesser tools --action check --tool nmap
+
+# 安装工具
+password-guesser tools --action install --tool gobuster
+
+# 更新工具
+password-guesser tools --action update
+```
+
+#### AI 分析 (analyze)
+
+```bash
+# 漏洞分析
+password-guesser analyze 192.168.1.100 --type vulnerability
+
+# 攻击面分析
+password-guesser analyze 192.168.1.100 --type attack_surface
+
+# 威胁分析
+password-guesser analyze 192.168.1.100 --type threat
+
+# 修复建议
+password-guesser analyze 192.168.1.100 --type remediation
+```
+
+#### 哈希计算 (hash)
+
+```bash
+# 计算哈希
+password-guesser hash --text "hello world"
+```
+
+#### 编码/解码 (encode)
+
+```bash
+# 编码
+password-guesser encode --text "secret" --method base64
+password-guesser encode --text "secret" --method hex
+password-guesser encode --text "secret" --method all
+
+# 解码
+password-guesser encode --text "c2VjcmV0" --method base64 --decode
+```
+
+#### 配置管理 (config)
+
+```bash
+# 显示配置
+password-guesser config --show
+
+# 设置配置
+password-guesser config --action set --key llm.api_key --value "sk-xxx"
+
+# 获取配置
+password-guesser config --action get --key llm.model
+
+# 初始化配置
+password-guesser config --action init
+```
+
+#### 报告生成 (report)
+
+```bash
+# 生成报告
+password-guesser report --session session.json --output report.md --format markdown
+password-guesser report --session session.json --output report.html --format html
+password-guesser report --session session.json --output report.json --format json
+```
+
+#### 性能测试 (benchmark)
+
+```bash
+# 完整测试
+password-guesser benchmark --model checkpoints/best_model.pt --iterations 100
+
+# 特定测试
+password-guesser benchmark --type inference --iterations 100
+password-guesser benchmark --type generation --iterations 50
+```
+
+#### 交互式终端 (interactive)
+
+```bash
+# 启动 Kali 风格终端
+password-guesser interactive
+
+# 或使用别名
+password-guesser shell
+password-guesser kali
+```
+
+交互式终端内置命令：
+```
+help              显示帮助
+exit/quit         退出终端
+clear             清屏
+status            显示状态
+history           命令历史
+set/get           配置管理
+
+use <module>      切换模块 (llm/pentest/recon/exploit/post/creds/web/network...)
+back              返回主菜单
+
+# LLM 模块命令
+exec <instruction>   执行 LLM 指令
+plan <target>        生成攻击计划
+analyze <target>     分析目标漏洞
+
+# 其他模块命令请参考 kali_terminal.py
+```
+
+#### 直接 LLM 交互 (llm)
+
+```bash
+# 直接询问 LLM
+password-guesser llm "如何检测和利用 Log4j 漏洞"
+password-guesser llm "分析 SSH 暴力破解的防御策略"
+```
+
 #### Python API
 
 ```python
