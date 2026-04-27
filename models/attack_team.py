@@ -77,7 +77,21 @@ class TeamTask:
 
 @dataclass
 class TeamMemory:
-    """Shared memory for the attack team."""
+    """
+    Shared memory for the attack team with importance-based filtering.
+
+    Prevents unbounded memory growth by scoring items by importance
+    and pruning low-value entries when limits are reached.
+    """
+    # Memory limits
+    MAX_HOSTS = 500
+    MAX_SERVICES = 1000
+    MAX_VULNERABILITIES = 500
+    MAX_CREDENTIALS = 200
+    MAX_ATTACK_HISTORY = 500
+    MAX_LESSONS = 100
+    MAX_DECISIONS = 200
+
     # Shared knowledge
     discovered_hosts: List[dict] = field(default_factory=list)
     discovered_services: List[dict] = field(default_factory=list)
@@ -94,6 +108,171 @@ class TeamMemory:
     # Team decisions
     decisions: List[dict] = field(default_factory=list)
 
+    def _calculate_importance(self, item: dict, category: str) -> float:
+        """
+        Calculate importance score for a memory item.
+
+        Returns a score from 0.0 (low) to 1.0 (high).
+        """
+        score = 0.5  # Base score
+
+        if category == "hosts":
+            # Hosts with more services/vulns are more important
+            vulns = item.get("vulnerabilities", [])
+            services = item.get("ports", item.get("services", {}))
+            service_count = len(services) if isinstance(services, (dict, list)) else 0
+            score += min(0.3, len(vulns) * 0.1)
+            score += min(0.2, service_count * 0.05)
+
+        elif category == "vulnerabilities":
+            # Higher CVSS = more important
+            cvss = item.get("cvss_score", item.get("severity", 0))
+            if isinstance(cvss, (int, float)):
+                score += min(0.5, cvss / 10.0)
+            severity = item.get("severity", "")
+            if severity in ("critical", "high"):
+                score += 0.3
+
+        elif category == "credentials":
+            # Admin/root credentials are most important
+            username = item.get("username", item.get("user", ""))
+            if isinstance(username, str):
+                if any(admin in username.lower() for admin in ["admin", "root", "system"]):
+                    score += 0.4
+            privilege = item.get("privilege", "")
+            if privilege in ("root", "admin", "system"):
+                score += 0.3
+
+        elif category == "services":
+            # Critical services are more important
+            critical_services = {"ssh", "rdp", "smb", "ldap", "kerberos", "dns"}
+            service_name = str(item.get("service", item.get("name", ""))).lower()
+            if any(cs in service_name for cs in critical_services):
+                score += 0.3
+
+        elif category == "attack_history":
+            # Successful attacks and high-reward actions are more important
+            if item.get("success", item.get("result") == "success"):
+                score += 0.3
+            reward = item.get("reward", 0)
+            if isinstance(reward, (int, float)) and reward > 0:
+                score += min(0.2, reward / 10.0)
+
+        elif category == "lessons":
+            # Lessons with more occurrences are more important
+            occurrences = item.get("occurrences", 1) if isinstance(item, dict) else 1
+            score += min(0.3, occurrences * 0.1)
+
+        elif category == "decisions":
+            # Recent and high-consensus decisions are more important
+            consensus = item.get("votes", item.get("consensus", 0))
+            if isinstance(consensus, (int, float)):
+                score += min(0.3, consensus * 0.1)
+
+        return min(1.0, score)
+
+    def _prune_list(self, items: List, category: str, max_size: int) -> List:
+        """
+        Prune a list to max_size, keeping the most important items.
+
+        Preserves recently added items even if lower importance.
+        """
+        if len(items) <= max_size:
+            return items
+
+        # Always keep the most recent 20% of items
+        recent_count = max(1, int(max_size * 0.2))
+        recent = items[-recent_count:]
+
+        # Score remaining items
+        older = items[:-recent_count]
+        scored = [(self._calculate_importance(item, category), item) for item in older]
+
+        # Sort by importance (descending) and keep top
+        scored.sort(key=lambda x: x[0], reverse=True)
+        keep_count = max_size - recent_count
+        kept = [item for _, item in scored[:keep_count]]
+
+        pruned = len(older) - keep_count
+        if pruned > 0:
+            logger.debug(f"Pruned {pruned} low-importance items from {category}")
+
+        return kept + recent
+
+    def update_from_state(self, state: dict) -> None:
+        """Update memory from current state with importance filtering."""
+        if state.get("hosts"):
+            for host in state["hosts"]:
+                if host not in self.discovered_hosts:
+                    self.discovered_hosts.append(host)
+            self.discovered_hosts = self._prune_list(
+                self.discovered_hosts, "hosts", self.MAX_HOSTS
+            )
+
+        if state.get("services"):
+            for service in state["services"]:
+                if service not in self.discovered_services:
+                    self.discovered_services.append(service)
+            self.discovered_services = self._prune_list(
+                self.discovered_services, "services", self.MAX_SERVICES
+            )
+
+        if state.get("vulnerabilities"):
+            for vuln in state["vulnerabilities"]:
+                if vuln not in self.discovered_vulnerabilities:
+                    self.discovered_vulnerabilities.append(vuln)
+            self.discovered_vulnerabilities = self._prune_list(
+                self.discovered_vulnerabilities, "vulnerabilities", self.MAX_VULNERABILITIES
+            )
+
+        if state.get("credentials"):
+            for cred in state["credentials"]:
+                if cred not in self.obtained_credentials:
+                    self.obtained_credentials.append(cred)
+            self.obtained_credentials = self._prune_list(
+                self.obtained_credentials, "credentials", self.MAX_CREDENTIALS
+            )
+
+        if state.get("compromised_hosts"):
+            for host in state["compromised_hosts"]:
+                if host not in self.compromised_hosts:
+                    self.compromised_hosts.append(host)
+
+    def add_attack_record(self, record: dict) -> None:
+        """Add an attack history record with importance-based pruning."""
+        self.attack_history.append(record)
+        self.attack_history = self._prune_list(
+            self.attack_history, "attack_history", self.MAX_ATTACK_HISTORY
+        )
+
+    def add_lesson(self, lesson: str) -> None:
+        """Add a lesson with deduplication and importance-based pruning."""
+        if lesson not in self.lessons:
+            self.lessons.append(lesson)
+            self.lessons = self._prune_list(
+                self.lessons, "lessons", self.MAX_LESSONS
+            )
+
+    def add_decision(self, decision: dict) -> None:
+        """Add a team decision with importance-based pruning."""
+        self.decisions.append(decision)
+        self.decisions = self._prune_list(
+            self.decisions, "decisions", self.MAX_DECISIONS
+        )
+
+    def get_memory_stats(self) -> dict:
+        """Get memory usage statistics."""
+        return {
+            "hosts": f"{len(self.discovered_hosts)}/{self.MAX_HOSTS}",
+            "services": f"{len(self.discovered_services)}/{self.MAX_SERVICES}",
+            "vulnerabilities": f"{len(self.discovered_vulnerabilities)}/{self.MAX_VULNERABILITIES}",
+            "credentials": f"{len(self.obtained_credentials)}/{self.MAX_CREDENTIALS}",
+            "attack_history": f"{len(self.attack_history)}/{self.MAX_ATTACK_HISTORY}",
+            "lessons": f"{len(self.lessons)}/{self.MAX_LESSONS}",
+            "decisions": f"{len(self.decisions)}/{self.MAX_DECISIONS}",
+            "compromised_hosts": len(self.compromised_hosts),
+        }
+
     def to_dict(self) -> dict:
         return {
             "discovered_hosts": self.discovered_hosts,
@@ -105,33 +284,6 @@ class TeamMemory:
             "lessons": self.lessons,
             "decisions": self.decisions,
         }
-
-    def update_from_state(self, state: dict) -> None:
-        """Update memory from current state."""
-        if state.get("hosts"):
-            for host in state["hosts"]:
-                if host not in self.discovered_hosts:
-                    self.discovered_hosts.append(host)
-
-        if state.get("services"):
-            for service in state["services"]:
-                if service not in self.discovered_services:
-                    self.discovered_services.append(service)
-
-        if state.get("vulnerabilities"):
-            for vuln in state["vulnerabilities"]:
-                if vuln not in self.discovered_vulnerabilities:
-                    self.discovered_vulnerabilities.append(vuln)
-
-        if state.get("credentials"):
-            for cred in state["credentials"]:
-                if cred not in self.obtained_credentials:
-                    self.obtained_credentials.append(cred)
-
-        if state.get("compromised_hosts"):
-            for host in state["compromised_hosts"]:
-                if host not in self.compromised_hosts:
-                    self.compromised_hosts.append(host)
 
 
 @dataclass
@@ -316,55 +468,163 @@ class AttackTeam:
         )
         self.meetings.append(result)
 
-        # Record decisions in memory
+        # Record decisions in memory (using importance-filtered method)
         for decision in decisions:
-            self.memory.decisions.append(decision)
+            self.memory.add_decision(decision)
 
         return result
 
+    def _assess_complexity(self, state: dict) -> str:
+        """
+        Assess target complexity based on state indicators.
+
+        Returns:
+            "simple", "medium", or "complex"
+        """
+        score = 0
+
+        hosts = state.get("hosts", [])
+        services = state.get("services", [])
+        vulns = state.get("vulnerabilities", [])
+        compromised = state.get("compromised_hosts", [])
+        credentials = state.get("credentials", [])
+
+        # Host count contributes to complexity
+        host_count = len(hosts) if isinstance(hosts, list) else len(str(hosts))
+        if host_count > 5:
+            score += 3
+        elif host_count > 2:
+            score += 2
+        elif host_count > 0:
+            score += 1
+
+        # Service diversity
+        service_count = len(services) if isinstance(services, list) else len(str(services))
+        if service_count > 10:
+            score += 2
+        elif service_count > 3:
+            score += 1
+
+        # Vulnerability count
+        vuln_count = len(vulns) if isinstance(vulns, list) else len(str(vulns))
+        if vuln_count > 5:
+            score += 2
+        elif vuln_count > 0:
+            score += 1
+
+        # Network topology complexity (multiple compromised hosts = pivot chains)
+        if len(compromised) > 2:
+            score += 2
+        elif len(compromised) > 0:
+            score += 1
+
+        # Credential types available
+        cred_count = len(credentials) if isinstance(credentials, list) else len(str(credentials))
+        if cred_count > 3:
+            score += 1
+
+        # Domain environment detection
+        if state.get("in_domain"):
+            score += 2
+
+        # Multi-stage attack required
+        if state.get("has_shell") and not state.get("is_admin"):
+            score += 1
+
+        # Classify
+        if score >= 8:
+            return "complex"
+        elif score >= 4:
+            return "medium"
+        else:
+            return "simple"
+
     def _select_participants(self, meeting_type: MeetingType, state: dict) -> List[str]:
-        """Select appropriate participants for a meeting."""
+        """
+        Select appropriate participants for a meeting.
+
+        Uses complexity-adaptive selection:
+        - simple: Commander + 1-2 relevant experts (fast decisions)
+        - medium: Commander + 3-4 relevant experts (balanced)
+        - complex: Full team (comprehensive analysis)
+        """
+        complexity = self._assess_complexity(state)
+        phase = state.get("phase", "").lower()
+
         # Leader always participates
         participants = ["Commander"]
 
-        # Add relevant experts based on state and meeting type
-        phase = state.get("phase", "").lower()
+        # === Emergency & Debrief: always full team ===
+        if meeting_type == MeetingType.EMERGENCY:
+            return list(self.members.keys())
 
-        if meeting_type == MeetingType.BRIEFING:
-            # Everyone joins briefing
-            participants = list(self.members.keys())
-
-        elif meeting_type == MeetingType.PLANNING:
-            # Include experts relevant to current phase
-            if phase in ["reconnaissance", "scanning"]:
-                participants.extend(["Scout", "Analyst"])
-            elif phase in ["exploitation"]:
-                participants.extend(["Striker", "Analyst"])
-            elif phase in ["post_exploitation"]:
-                participants.extend(["Ghost", "Hunter"])
-            elif phase in ["lateral_movement"]:
-                participants.extend(["Phantom", "Hunter"])
-
-        elif meeting_type == MeetingType.REVIEW:
-            # Include active experts
-            if state.get("vulnerabilities"):
-                participants.append("Analyst")
+        if meeting_type == MeetingType.DEBRIEF:
+            # Debrief: include experts who were active
+            if state.get("compromised_hosts"):
+                participants.extend(["Ghost", "Phantom"])
             if state.get("credentials"):
                 participants.append("Hunter")
-            if state.get("compromised_hosts"):
-                participants.append("Ghost")
+            if state.get("vulnerabilities"):
+                participants.extend(["Analyst", "Striker"])
+            if len(participants) == 1:
+                return list(self.members.keys())
+            return list(set(participants))
 
-        elif meeting_type == MeetingType.EMERGENCY:
-            # All hands on deck
-            participants = list(self.members.keys())
+        # === Briefing: scale by complexity ===
+        if meeting_type == MeetingType.BRIEFING:
+            if complexity == "simple":
+                # Simple target: Commander + Scout + Analyst
+                participants.extend(["Scout", "Analyst"])
+            elif complexity == "medium":
+                # Medium target: Commander + phase-relevant + supporting
+                participants.extend(["Scout", "Analyst", "Striker"])
+            else:
+                # Complex target: full team briefing
+                return list(self.members.keys())
+            return list(set(participants))
 
+        # === Planning & Review: phase-based with complexity scaling ===
+        phase_experts = {
+            "reconnaissance": ["Scout", "Analyst"],
+            "scanning": ["Scout", "Analyst"],
+            "exploitation": ["Striker", "Analyst"],
+            "post_exploitation": ["Ghost", "Hunter"],
+            "lateral_movement": ["Phantom", "Hunter"],
+            "privilege_escalation": ["Ghost", "Analyst"],
+            "credential_attacks": ["Hunter", "Ghost"],
+        }
+
+        base_experts = phase_experts.get(phase, ["Scout"])
+
+        if complexity == "simple":
+            # Simple: Commander + 1 primary expert
+            participants.append(base_experts[0])
+        elif complexity == "medium":
+            # Medium: Commander + primary + 1 supporting
+            participants.extend(base_experts[:2])
+            # Add context-aware support
+            if state.get("vulnerabilities") and "Analyst" not in participants:
+                participants.append("Analyst")
+            if state.get("credentials") and "Hunter" not in participants:
+                participants.append("Hunter")
         else:
-            # Default: include most relevant
-            decision = self.router.analyze_situation(state)
-            for name, member in self.members.items():
-                if member.expert_type == decision.primary_expert:
-                    participants.append(name)
-                    break
+            # Complex: Commander + all phase experts + supporting
+            participants.extend(base_experts)
+
+            if meeting_type == MeetingType.REVIEW:
+                # Review adds extra context experts
+                if state.get("vulnerabilities"):
+                    participants.append("Analyst")
+                if state.get("credentials"):
+                    participants.append("Hunter")
+                if state.get("compromised_hosts"):
+                    participants.append("Ghost")
+            else:
+                # Planning adds cross-domain experts
+                if "Scout" not in participants:
+                    participants.append("Scout")
+                if "Striker" not in participants:
+                    participants.append("Striker")
 
         return list(set(participants))
 
@@ -487,7 +747,7 @@ class AttackTeam:
 
         # Record high-priority decision
         if decisions:
-            self.memory.decisions.append({
+            self.memory.add_decision({
                 "meeting_type": meeting_type.value,
                 "top_decision": decisions[0]["action"],
                 "votes": decisions[0]["votes"],
@@ -514,26 +774,153 @@ class AttackTeam:
         return action_plan
 
     def _calculate_consensus(self, inputs: Dict[str, dict]) -> float:
-        """Calculate consensus level among team members."""
+        """
+        Calculate consensus level among team members using weighted consensus.
+
+        Considers:
+        1. Tool overlap (Jaccard similarity)
+        2. Semantic similarity of tools (same category = partial match)
+        3. Expert confidence weights
+        4. Action type alignment
+
+        Returns:
+            Consensus level between 0.0 and 1.0
+        """
         if len(inputs) <= 1:
             return 1.0
 
-        # Calculate based on tool overlap
-        tools = [set(data["advice"].tools_to_use) for data in inputs.values() if data["advice"].tools_to_use]
+        # Extract tools and actions from each expert
+        expert_data = []
+        for name, data in inputs.items():
+            advice = data["advice"]
+            confidence = data.get("confidence", 0.5)
+            tools = set(advice.tools_to_use) if advice.tools_to_use else set()
+            action_types = set(
+                a.get("type", "").lower()
+                for a in advice.recommended_actions
+            ) if advice.recommended_actions else set()
+            expert_data.append({
+                "name": name,
+                "tools": tools,
+                "action_types": action_types,
+                "confidence": confidence,
+            })
 
-        if not tools:
+        if not expert_data or all(not e["tools"] and not e["action_types"] for e in expert_data):
             return 0.5
 
-        # Jaccard similarity average
-        similarities = []
-        for i, tools_i in enumerate(tools):
-            for tools_j in tools[i+1:]:
-                intersection = len(tools_i & tools_j)
-                union = len(tools_i | tools_j)
-                if union > 0:
-                    similarities.append(intersection / union)
+        # Tool category mapping for semantic similarity
+        tool_categories = {
+            # Reconnaissance tools
+            "scan": {"nmap", "masscan", "rustscan", "zmap", "unicornscan"},
+            "vuln_scan": {"nikto", "nuclei", "openvas", "nessus", "wpscan", "joomscan"},
+            "osint": {"theharvester", "shodan", "censys", "maltego", "spiderfoot"},
+            "dns": {"dnsrecon", "dnsenum", "fierce", "sublist3r"},
+            # Exploitation tools
+            "exploit": {"metasploit", "msfvenom", "searchsploit", "exploitdb"},
+            "web_exploit": {"sqlmap", "burpsuite", "gobuster", "dirb", "ffuf"},
+            # Credential tools
+            "brute_force": {"hydra", "medusa", "ncrack", "patator"},
+            "crack": {"hashcat", "john", "ophcrack", "rainbowcrack"},
+            "hash_dump": {"mimikatz", "secretsdump", "pwdump", "fgdump", "samdump2"},
+            # Post-exploitation tools
+            "priv_esc": {"winpeas", "linpeas", "seatbelt", "sharpup", "pspy"},
+            "lateral": {"crackmapexec", "psexec", "wmiexec", "evil-winrm", "impacket"},
+            "persist": {"sharppersist", "empire", "covenant"},
+            # Data exfil
+            "exfil": {"rclone", "dns-exfil", "icmp-exfil"},
+        }
 
-        return sum(similarities) / len(similarities) if similarities else 0.5
+        def get_tool_category(tool: str) -> Optional[str]:
+            """Get category for a tool."""
+            tool_lower = tool.lower()
+            for category, tools in tool_categories.items():
+                if any(t in tool_lower for t in tools):
+                    return category
+            return None
+
+        def semantic_similarity(tool1: str, tool2: str) -> float:
+            """Calculate semantic similarity between two tools."""
+            if tool1.lower() == tool2.lower():
+                return 1.0
+
+            cat1 = get_tool_category(tool1)
+            cat2 = get_tool_category(tool2)
+
+            if cat1 and cat2 and cat1 == cat2:
+                return 0.7  # Same category = high similarity
+
+            # Related categories
+            related = {
+                ("scan", "vuln_scan"): 0.5,
+                ("brute_force", "crack"): 0.5,
+                ("exploit", "web_exploit"): 0.5,
+                ("lateral", "hash_dump"): 0.3,
+            }
+            if cat1 and cat2:
+                pair = (cat1, cat2) if (cat1, cat2) in related else (cat2, cat1)
+                if pair in related:
+                    return related[pair]
+
+            return 0.0
+
+        # Calculate pairwise weighted consensus
+        similarities = []
+
+        for i, expert_i in enumerate(expert_data):
+            for expert_j in expert_data[i+1:]:
+                # Tool similarity (semantic-aware)
+                tools_i = expert_i["tools"]
+                tools_j = expert_j["tools"]
+
+                if tools_i and tools_j:
+                    # Calculate semantic similarity matrix
+                    tool_similarities = []
+                    for t1 in tools_i:
+                        max_sim = max(
+                            (semantic_similarity(t1, t2) for t2 in tools_j),
+                            default=0.0
+                        )
+                        tool_similarities.append(max_sim)
+
+                    tool_consensus = sum(tool_similarities) / len(tool_similarities)
+                else:
+                    tool_consensus = 0.5  # No tools = neutral
+
+                # Action type similarity
+                actions_i = expert_i["action_types"]
+                actions_j = expert_j["action_types"]
+
+                if actions_i and actions_j:
+                    action_intersection = len(actions_i & actions_j)
+                    action_union = len(actions_i | actions_j)
+                    action_consensus = action_intersection / action_union if action_union > 0 else 0.5
+                else:
+                    action_consensus = 0.5
+
+                # Confidence-weighted pair consensus
+                weight_i = expert_i["confidence"]
+                weight_j = expert_j["confidence"]
+                avg_weight = (weight_i + weight_j) / 2
+
+                pair_consensus = (
+                    0.6 * tool_consensus +  # Tools matter more
+                    0.4 * action_consensus
+                ) * avg_weight  # Weight by confidence
+
+                similarities.append(pair_consensus)
+
+        # Overall consensus
+        if not similarities:
+            return 0.5
+
+        raw_consensus = sum(similarities) / len(similarities)
+
+        # Apply boost for high agreement
+        if raw_consensus > 0.7:
+            raw_consensus = min(1.0, raw_consensus * 1.1)
+
+        return raw_consensus
 
     def assign_task(self, description: str, assigned_to: str, priority: int = 1) -> TeamTask:
         """Assign a task to a team member."""
@@ -574,8 +961,8 @@ class AttackTeam:
                         / member.tasks_completed
                     )
 
-            # Record in memory
-            self.memory.attack_history.append({
+            # Record in memory using importance-filtered method
+            self.memory.add_attack_record({
                 "task_id": task_id,
                 "description": task.description,
                 "assigned_to": task.assigned_to,
@@ -644,8 +1031,7 @@ class AttackTeam:
                 lessons.append(f"失败: {outcome.get('action', 'unknown')} - {outcome.get('error', '')}")
 
         for lesson in lessons:
-            if lesson not in self.memory.lessons:
-                self.memory.lessons.append(lesson)
+            self.memory.add_lesson(lesson)
 
         return self.hold_meeting(MeetingType.DEBRIEF, state)
 

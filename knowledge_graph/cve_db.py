@@ -310,3 +310,78 @@ class CVEDatabase:
             if entry:
                 results[cve_id] = entry
         return results
+
+    def search_by_date_range(self, start_date: str, end_date: str) -> List[dict]:
+        """
+        Search CVEs published within a date range (incremental sync support).
+
+        Args:
+            start_date: Start date in YYYY-MM-DD format
+            end_date: End date in YYYY-MM-DD format
+
+        Returns:
+            List of CVE data dicts (simplified format for sync pipeline)
+        """
+        self._rate_limit()
+
+        try:
+            params = {
+                "pubStartDate": f"{start_date}T00:00:00.000",
+                "pubEndDate": f"{end_date}T23:59:59.999",
+            }
+            response = self._session.get(
+                self.api_base,
+                params=params,
+                timeout=60,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            results = []
+            for vuln in data.get("vulnerabilities", []):
+                cve_data = vuln.get("cve", {})
+                cve_id = cve_data.get("id", "")
+
+                # Parse basic info
+                descriptions = cve_data.get("descriptions", [])
+                description = ""
+                for desc in descriptions:
+                    if desc.get("lang") == "en":
+                        description = desc.get("value", "")
+                        break
+
+                # CVSS score
+                cvss_score = 0.0
+                metrics = cve_data.get("metrics", {})
+                for version in ["cvssMetricV31", "cvssMetricV30"]:
+                    if version in metrics and metrics[version]:
+                        cvss_score = metrics[version][0].get("cvssData", {}).get("baseScore", 0.0)
+                        break
+
+                entry_data = {
+                    "cve_id": cve_id,
+                    "description": description,
+                    "cvss_score": cvss_score,
+                    "published_date": cve_data.get("published", ""),
+                    "modified_date": cve_data.get("lastModified", ""),
+                }
+
+                # Cache the entry
+                if cve_id:
+                    entry = CVEEntry(
+                        cve_id=cve_id,
+                        description=description,
+                        cvss_score=cvss_score,
+                        cvss_vector="",
+                        published_date=cve_data.get("published", ""),
+                        modified_date=cve_data.get("lastModified", ""),
+                    )
+                    self.cache[cve_id] = entry
+
+                results.append(entry_data)
+
+            return results
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to search CVEs by date range: {e}")
+            return []

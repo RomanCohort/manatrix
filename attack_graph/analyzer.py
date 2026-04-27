@@ -2,13 +2,14 @@
 Attack Graph Analyzer
 
 Provides analysis capabilities for attack graphs:
-- Find attack paths
+- Find attack paths (BFS and A* with heuristic pruning)
 - Calculate risk scores
 - Identify critical nodes
 - Simulate attacks
 - Generate mitigations
 """
 
+import math
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Set, Tuple
 import heapq
@@ -90,9 +91,19 @@ class AttackGraphAnalyzer:
         target: str,
         max_paths: int = 10,
         min_probability: float = 0.1,
+        max_depth: int = 20,
+        use_astar: bool = True,
     ) -> List[AttackPath]:
         """
         Find all attack paths to a target node.
+
+        Args:
+            graph: Attack graph
+            target: Target node ID
+            max_paths: Maximum number of paths to return
+            min_probability: Minimum path probability threshold
+            max_depth: Maximum path depth (pruning parameter)
+            use_astar: Use A* search (default True) for better pruning
 
         Returns paths sorted by risk score (highest first).
         """
@@ -110,11 +121,165 @@ class AttackGraphAnalyzer:
         all_paths: List[AttackPath] = []
 
         for network in network_nodes:
-            raw_paths = graph.find_paths(network, target, max_paths=max_paths)
+            if use_astar:
+                # Use A* search with probability heuristic
+                raw_paths = self._find_paths_astar(
+                    graph, network, target,
+                    max_paths=max_paths,
+                    max_depth=max_depth,
+                    min_probability=min_probability,
+                )
+            else:
+                # Fallback to BFS
+                raw_paths = graph.find_paths(network, target, max_paths=max_paths)
+
             for raw_path in raw_paths:
                 attack_path = self._build_attack_path(graph, raw_path)
                 if attack_path.probability >= min_probability:
                     all_paths.append(attack_path)
+
+            # Early termination if we have enough high-quality paths
+            if len(all_paths) >= max_paths * 2:
+                break
+
+        return sorted(all_paths, key=lambda p: p.risk_score, reverse=True)[:max_paths]
+
+    def _find_paths_astar(
+        self,
+        graph: AttackGraph,
+        source: str,
+        target: str,
+        max_paths: int = 10,
+        max_depth: int = 20,
+        min_probability: float = 0.1,
+    ) -> List[List[str]]:
+        """
+        Find attack paths using A* search with heuristic pruning.
+
+        Heuristic: favor paths with higher individual edge probabilities.
+        This guides search toward high-quality paths first.
+        """
+        if source not in graph.nodes or target not in graph.nodes:
+            return []
+
+        paths: List[List[str]] = []
+        # Priority queue: (negative cumulative probability, path_length, path)
+        # We use negative probability because heapq is min-heap
+        open_set: List[Tuple[float, int, List[str]]] = [(0.0, 0, [source])]
+        visited_paths: Set[frozenset] = set()
+
+        while open_set and len(paths) < max_paths:
+            # Pop highest probability path
+            neg_prob, length, path = heapq.heappop(open_set)
+            current = path[-1]
+
+            # Check if we've reached the target
+            if current == target:
+                paths.append(path)
+                continue
+
+            # Prune by depth
+            if length >= max_depth:
+                continue
+
+            # Mark as visited (by path set to avoid cycles)
+            path_set = frozenset(path)
+            if path_set in visited_paths:
+                continue
+            visited_paths.add(path_set)
+
+            # Expand neighbors
+            outgoing = graph.get_outgoing_edges(current)
+            if not outgoing:
+                continue
+
+            # Sort neighbors by edge probability (best first)
+            sorted_edges = sorted(outgoing, key=lambda e: e.probability, reverse=True)
+
+            for edge in sorted_edges:
+                neighbor = edge.target
+                if neighbor not in path:  # Avoid cycles
+                    # Calculate heuristic: estimated best probability to target
+                    # Heuristic = edge probability * max possible from neighbor
+                    heuristic = edge.probability * 0.95  # Optimistic estimate
+                    new_prob = abs(neg_prob) + (-math.log(edge.probability + 1e-10))
+
+                    new_path = path + [neighbor]
+                    # Prune if cumulative probability is too low
+                    if edge.probability < min_probability * 0.5:
+                        continue
+
+                    heapq.heappush(open_set, (-new_prob, length + 1, new_path))
+
+        return paths
+
+    def find_attack_paths_with_diversification(
+        self,
+        graph: AttackGraph,
+        target: str,
+        max_paths: int = 10,
+        min_probability: float = 0.1,
+    ) -> List[AttackPath]:
+        """
+        Find diverse attack paths covering different entry points.
+
+        Useful for security assessment - finds paths that use different
+        vulnerabilities or entry methods rather than variations of the same path.
+        """
+        if target not in graph.nodes:
+            return []
+
+        network_nodes = [
+            n.id for n in graph.nodes.values()
+            if n.type == NodeType.NETWORK
+        ]
+
+        if not network_nodes:
+            return []
+
+        # Track which entry nodes/vulns have been covered
+        covered_entries: Set[str] = set()
+        covered_vulns: Set[str] = set()
+
+        all_paths: List[AttackPath] = []
+
+        for network in network_nodes:
+            raw_paths = self._find_paths_astar(
+                graph, network, target,
+                max_paths=max_paths * 2,  # Find more to filter
+                max_depth=20,
+                min_probability=min_probability,
+            )
+
+            for raw_path in raw_paths:
+                attack_path = self._build_attack_path(graph, raw_path)
+                if attack_path.probability < min_probability:
+                    continue
+
+                # Check diversity
+                entry_node = raw_path[0] if raw_path else ""
+                vuln_ids = set(
+                    e.cve_id for e in attack_path.edges
+                    if e.cve_id
+                )
+
+                # Skip if too similar to existing paths
+                if entry_node in covered_entries and vuln_ids.issubset(covered_vulns):
+                    # But still include if it's significantly better
+                    if not all_paths or attack_path.risk_score > all_paths[0].risk_score * 1.5:
+                        all_paths.append(attack_path)
+                        covered_vulns.update(vuln_ids)
+                    continue
+
+                all_paths.append(attack_path)
+                covered_entries.add(entry_node)
+                covered_vulns.update(vuln_ids)
+
+                if len(all_paths) >= max_paths:
+                    break
+
+            if len(all_paths) >= max_paths:
+                break
 
         return sorted(all_paths, key=lambda p: p.risk_score, reverse=True)[:max_paths]
 
@@ -185,11 +350,18 @@ class AttackGraphAnalyzer:
         self,
         graph: AttackGraph,
         top_n: int = 10,
+        sample_paths: int = 50,
     ) -> List[AttackNode]:
         """
         Find the most critical nodes using betweenness centrality approximation.
 
         Critical nodes are those that appear on many attack paths.
+        Uses sampling for large graphs to avoid combinatorial explosion.
+
+        Args:
+            graph: Attack graph
+            top_n: Number of critical nodes to return
+            sample_paths: Max paths to sample (controls performance)
         """
         node_scores: Dict[str, float] = {nid: 0.0 for nid in graph.nodes}
 
@@ -198,13 +370,36 @@ class AttackGraphAnalyzer:
             if n.type == NodeType.NETWORK
         ]
 
-        # Count how many times each node appears on paths
-        for target in graph.nodes:
-            if graph.nodes[target].type in (NodeType.HOST, NodeType.VULNERABILITY):
-                for network in network_nodes:
-                    paths = graph.find_paths(network, target, max_paths=20)
-                    for path in paths:
-                        for node_id in path:
+        # Limit sampling for large graphs
+        target_nodes = [
+            nid for nid, node in graph.nodes.items()
+            if node.type in (NodeType.HOST, NodeType.VULNERABILITY)
+        ]
+
+        # If too many targets, sample a representative subset
+        if len(target_nodes) > 20:
+            import random
+            random.seed(42)  # Deterministic sampling
+            target_nodes = random.sample(target_nodes, 20)
+
+        paths_sampled = 0
+        for target in target_nodes:
+            if paths_sampled >= sample_paths:
+                break
+            for network in network_nodes:
+                if paths_sampled >= sample_paths:
+                    break
+                # Use A* with limited depth for efficiency
+                paths = self._find_paths_astar(
+                    graph, network, target,
+                    max_paths=min(10, sample_paths - paths_sampled),
+                    max_depth=15,
+                    min_probability=0.05,
+                )
+                for path in paths:
+                    paths_sampled += 1
+                    for node_id in path:
+                        if node_id in node_scores:
                             node_scores[node_id] += 1.0
 
         # Sort by score

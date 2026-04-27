@@ -8,13 +8,56 @@ Supports multiple routing strategies: rule-based, LLM-based, and performance-bas
 import logging
 import re
 import time
+import hashlib
+import json
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Tuple
+from functools import lru_cache
+from collections import OrderedDict
 
 from models.enums import ExpertType
 from models.experts.base import PenTestExpert, ExpertAdvice, ExpertCapability
 
 logger = logging.getLogger(__name__)
+
+
+class LRUCache:
+    """Simple LRU cache for routing decisions."""
+
+    def __init__(self, maxsize: int = 100):
+        self.cache: OrderedDict = OrderedDict()
+        self.maxsize = maxsize
+        self.hits = 0
+        self.misses = 0
+
+    def get(self, key: str) -> Optional[any]:
+        if key in self.cache:
+            self.hits += 1
+            # Move to end (most recently used)
+            self.cache.move_to_end(key)
+            return self.cache[key]
+        self.misses += 1
+        return None
+
+    def put(self, key: str, value: any) -> None:
+        if key in self.cache:
+            self.cache.move_to_end(key)
+        else:
+            if len(self.cache) >= self.maxsize:
+                # Remove least recently used
+                self.cache.popitem(last=False)
+        self.cache[key] = value
+
+    def get_stats(self) -> dict:
+        total = self.hits + self.misses
+        hit_rate = self.hits / total if total > 0 else 0.0
+        return {
+            "hits": self.hits,
+            "misses": self.misses,
+            "size": len(self.cache),
+            "maxsize": self.maxsize,
+            "hit_rate": hit_rate,
+        }
 
 
 @dataclass
@@ -83,7 +126,7 @@ class ExpertRouter:
 
     Routing strategies:
     1. Rule-based: Match keywords to expert domains
-    2. LLM-based: Use LLM to classify and route
+    2. LLM-based: Use LLM to classify and route (with caching)
     3. Performance-based: Route to experts with best track record
     """
 
@@ -91,11 +134,18 @@ class ExpertRouter:
         self,
         llm_provider=None,
         rag_retriever=None,
+        cache_maxsize: int = 100,
     ):
         self.llm = llm_provider
         self.rag = rag_retriever
         self.experts: Dict[ExpertType, PenTestExpert] = {}
         self.routing_history: List[dict] = []
+
+        # LLM routing cache
+        self._llm_cache = LRUCache(maxsize=cache_maxsize)
+
+        # State hash cache for common scenarios
+        self._state_cache = LRUCache(maxsize=50)
 
     def register_expert(self, expert: PenTestExpert) -> None:
         """Register an expert with the router."""
@@ -110,6 +160,26 @@ class ExpertRouter:
         """Get list of registered expert types."""
         return list(self.experts.keys())
 
+    def _state_to_cache_key(self, state: dict, query: str = None) -> str:
+        """Generate a cache key from state and query."""
+        # Normalize state to a hashable form
+        key_parts = [
+            state.get("phase", ""),
+            str(len(state.get("hosts", []))),
+            str(len(state.get("services", []))),
+            str(len(state.get("vulnerabilities", []))),
+            str(len(state.get("credentials", []))),
+            "shell" if state.get("has_shell") else "no_shell",
+            "admin" if state.get("is_admin") else "no_admin",
+            str(len(state.get("compromised_hosts", []))),
+        ]
+
+        if query:
+            key_parts.append(query[:100])  # Truncate long queries
+
+        key_str = "|".join(key_parts)
+        return hashlib.md5(key_str.encode()).hexdigest()[:16]
+
     def analyze_situation(self, state: dict, query: str = None) -> RoutingDecision:
         """
         Analyze current situation and determine which expert(s) to consult.
@@ -121,14 +191,26 @@ class ExpertRouter:
         Returns:
             RoutingDecision with primary and supporting experts
         """
-        # Try rule-based routing first
+        # Rule-based routing is fast, always run it
         decision = self._rule_based_routing(state, query)
 
-        # If LLM available and confidence low, try LLM routing
+        # If LLM available and confidence low, try LLM routing (with cache)
         if self.llm and decision.confidence < 0.7:
-            llm_decision = self._llm_based_routing(state, query)
-            if llm_decision and llm_decision.confidence > decision.confidence:
-                decision = llm_decision
+            # Check cache first
+            cache_key = self._state_to_cache_key(state, query)
+            cached_decision = self._llm_cache.get(cache_key)
+
+            if cached_decision is not None:
+                logger.debug(f"LLM routing cache hit for key {cache_key}")
+            else:
+                llm_decision = self._llm_based_routing(state, query)
+                if llm_decision and llm_decision.confidence > decision.confidence:
+                    decision = llm_decision
+                    # Cache the LLM decision
+                    self._llm_cache.put(cache_key, decision)
+                elif llm_decision:
+                    # Cache even if not better (for future reference)
+                    self._llm_cache.put(cache_key, llm_decision)
 
         # Check performance history for adjustment
         decision = self._performance_adjustment(decision)
@@ -209,6 +291,19 @@ class ExpertRouter:
             expert.call_count += 1
             if was_successful:
                 expert.success_count += 1
+
+    def get_cache_stats(self) -> dict:
+        """Get routing cache statistics."""
+        return {
+            "llm_cache": self._llm_cache.get_stats(),
+            "state_cache": self._state_cache.get_stats(),
+        }
+
+    def clear_cache(self) -> None:
+        """Clear all caches."""
+        self._llm_cache.cache.clear()
+        self._state_cache.cache.clear()
+        logger.info("Routing caches cleared")
 
     def _rule_based_routing(self, state: dict, query: str = None) -> RoutingDecision:
         """Route based on keywords and state phase."""

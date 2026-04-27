@@ -15,6 +15,76 @@ from .action import PenTestAction, ActionType, ActionSpace
 logger = logging.getLogger(__name__)
 
 
+class SimulationMode:
+    """Training simulation modes - different difficulty and realism levels."""
+
+    SYNTHETIC = "synthetic"  # Basic synthetic environment (default)
+    METASPLOITABLE = "metasploitable"  # Metasploitable VM-based
+    DOCKER_NETWORK = "docker_network"  # Docker container network
+    REAL_TARGET = "real_target"  # Real authorized target
+
+    @classmethod
+    def get_config(cls, mode: str) -> dict:
+        """Get environment configuration for a simulation mode."""
+        configs = {
+            cls.SYNTHETIC: {
+                "description": "Basic synthetic environment",
+                "difficulty": 0.5,
+                "exploit_success_prob": 0.7,
+                "lateral_success_prob": 0.6,
+                "privesc_success_prob": 0.5,
+                "brute_force_prob": 0.3,
+                "noise_level": 0.1,
+                "max_hosts": 5,
+                "typical_vulns": ["CVE-2021-44228", "CVE-2017-0144"],
+            },
+            cls.METASPLOITABLE: {
+                "description": "Metasploitable VM environment",
+                "difficulty": 0.6,
+                "exploit_success_prob": 0.8,
+                "lateral_success_prob": 0.7,
+                "privesc_success_prob": 0.6,
+                "brute_force_prob": 0.4,
+                "noise_level": 0.15,
+                "max_hosts": 10,
+                "typical_vulns": [
+                    "CVE-2006-2072",  #_distcc
+                    "CVE-2010-2070",  # tunnel
+                    "CVE-2009-2683",  # java
+                    "CVE-2012-2122",  # mysql
+                ],
+            },
+            cls.DOCKER_NETWORK: {
+                "description": "Docker container network simulation",
+                "difficulty": 0.7,
+                "exploit_success_prob": 0.75,
+                "lateral_success_prob": 0.65,
+                "privesc_success_prob": 0.55,
+                "brute_force_prob": 0.35,
+                "noise_level": 0.2,
+                "max_hosts": 15,
+                "typical_vulns": [
+                    "CVE-2019-5736",  # runc
+                    "CVE-2018-10933",  # libssh
+                    "CVE-2017-12617",  # tomcat
+                    "CVE-2019-10149",  # exim
+                ],
+            },
+            cls.REAL_TARGET: {
+                "description": "Real authorized target (highest realism)",
+                "difficulty": 0.9,
+                "exploit_success_prob": 0.6,
+                "lateral_success_prob": 0.5,
+                "privesc_success_prob": 0.4,
+                "brute_force_prob": 0.2,
+                "noise_level": 0.3,
+                "max_hosts": 50,
+                "typical_vulns": [],  # Unknown until discovered
+            },
+        }
+        return configs.get(mode, configs[cls.SYNTHETIC])
+
+
 class PenTestEnvironment:
     """
     Simulated penetration testing environment for RL training.
@@ -22,12 +92,19 @@ class PenTestEnvironment:
     Follows OpenAI Gymnasium interface:
     - reset() -> initial state
     - step(action) -> (next_state, reward, done, info)
+
+    Supports multiple training modes via SimulationMode:
+    - synthetic: Basic simulation (default)
+    - metasploitable: Metasploitable VM configurations
+    - docker_network: Docker container network scenarios
+    - real_target: Real authorized targets
     """
 
     def __init__(
         self,
         hosts: Optional[List[dict]] = None,
         network_config: Optional[dict] = None,
+        simulation_mode: str = "synthetic",
     ):
         """
         Initialize environment with target network configuration.
@@ -47,8 +124,18 @@ class PenTestEnvironment:
                     "subnet": "192.168.1.0/24",
                     "gateway": "192.168.1.1",
                 }
+            simulation_mode: Training mode ("synthetic", "metasploitable",
+                "docker_network", "real_target")
         """
-        self.hosts = hosts or self._default_network()
+        self.simulation_mode = simulation_mode
+        self.mode_config = SimulationMode.get_config(simulation_mode)
+
+        # Get hosts based on mode
+        if hosts:
+            self.hosts = hosts
+        else:
+            self.hosts = self._get_default_network_for_mode(simulation_mode)
+
         self.network_config = network_config or {"subnet": "192.168.1.0/24"}
         self.action_space = ActionSpace()
         self.state = PenTestState()
@@ -56,45 +143,165 @@ class PenTestEnvironment:
         self.max_steps = 100
         self.history: List[Dict] = []
 
+        logger.info(
+            f"Initialized environment with mode '{simulation_mode}': "
+            f"{self.mode_config['description']}"
+        )
+
     def _default_network(self) -> List[dict]:
         """Generate a default target network for testing."""
-        return [
-            {
-                "ip": "192.168.1.100",
-                "os": "Linux",
-                "ports": {22: "ssh", 80: "http", 443: "https"},
-                "vulnerabilities": ["CVE-2021-44228"],
-                "services": {
-                    "ssh": {"users": ["admin", "user"]},
-                    "http": {"framework": "django", "version": "3.2"},
+        return self._get_default_network_for_mode(self.simulation_mode)
+
+    def _get_default_network_for_mode(self, mode: str) -> List[dict]:
+        """Get default network configuration based on simulation mode."""
+        configs = {
+            "synthetic": [
+                {
+                    "ip": "192.168.1.100",
+                    "os": "Linux",
+                    "ports": {22: "ssh", 80: "http", 443: "https"},
+                    "vulnerabilities": ["CVE-2021-44228"],
+                    "services": {
+                        "ssh": {"users": ["admin", "user"]},
+                        "http": {"framework": "django", "version": "3.2"},
+                    },
+                    "credential": {"admin": "admin123"},
+                    "data": ["database_dump.sql", "config.py"],
                 },
-                "credential": {"admin": "admin123"},
-                "data": ["database_dump.sql", "config.py"],
-            },
-            {
-                "ip": "192.168.1.101",
-                "os": "Windows",
-                "ports": {445: "smb", 3389: "rdp"},
-                "vulnerabilities": ["CVE-2017-0144"],
-                "services": {
-                    "smb": {"version": "SMBv1"},
+                {
+                    "ip": "192.168.1.101",
+                    "os": "Windows",
+                    "ports": {445: "smb", 3389: "rdp"},
+                    "vulnerabilities": ["CVE-2017-0144"],
+                    "services": {
+                        "smb": {"version": "SMBv1"},
+                    },
+                    "credential": {"administrator": "P@ssw0rd"},
+                    "data": ["passwords.xlsx", "network_diagram.pdf"],
                 },
-                "credential": {"administrator": "P@ssw0rd"},
-                "data": ["passwords.xlsx", "network_diagram.pdf"],
-            },
-            {
-                "ip": "192.168.1.102",
-                "os": "Linux",
-                "ports": {22: "ssh", 3306: "mysql", 6379: "redis"},
-                "vulnerabilities": [],
-                "services": {
-                    "mysql": {"users": ["root"], "version": "5.7"},
-                    "redis": {"version": "6.0", "auth": False},
+                {
+                    "ip": "192.168.1.102",
+                    "os": "Linux",
+                    "ports": {22: "ssh", 3306: "mysql", 6379: "redis"},
+                    "vulnerabilities": [],
+                    "services": {
+                        "mysql": {"users": ["root"], "version": "5.7"},
+                        "redis": {"version": "6.0", "auth": False},
+                    },
+                    "credential": {"root": "toor"},
+                    "data": ["customer_data.sql"],
                 },
-                "credential": {"root": "toor"},
-                "data": ["customer_data.sql"],
-            },
-        ]
+            ],
+            "metasploitable": [
+                {
+                    "ip": "192.168.1.50",
+                    "os": "Linux",
+                    "ports": {21: "ftp", 22: "ssh", 23: "telnet", 80: "http",
+                              3306: "mysql", 5432: "postgresql", 8009: "ajp13"},
+                    "vulnerabilities": ["CVE-2006-2072", "CVE-2010-2070"],
+                    "services": {
+                        "ftp": {"version": "vsftpd 2.3.4"},
+                        "telnet": {"version": "Linux telnetd"},
+                        "http": {"framework": "php", "version": "5.2.4"},
+                    },
+                    "credential": {"root": "toor", "user": "user"},
+                    "data": [],
+                },
+                {
+                    "ip": "192.168.1.51",
+                    "os": "Linux",
+                    "ports": {512: "rexec", 513: "rlogin", 514: "rsh", 1524: "ingreslock"},
+                    "vulnerabilities": ["CVE-1999-0640"],
+                    "services": {
+                        "rexec": {},
+                        "rlogin": {},
+                    },
+                    "credential": {"root": "root"},
+                    "data": [],
+                },
+                {
+                    "ip": "192.168.1.52",
+                    "os": "Linux",
+                    "ports": {21: "ftp", 80: "http", 443: "https", 10000: "http"},
+                    "vulnerabilities": ["CVE-2009-2683"],
+                    "services": {
+                        "http": {"framework": "webdav", "version": "1.0"},
+                        "http_proxy": {"version": "1.0"},
+                    },
+                    "credential": {"admin": "admin"},
+                    "data": [],
+                },
+            ],
+            "docker_network": [
+                {
+                    "ip": "172.17.0.2",
+                    "os": "Linux",
+                    "ports": {22: "ssh", 2375: "docker", 8080: "web"},
+                    "vulnerabilities": ["CVE-2019-5736"],
+                    "services": {
+                        "docker": {"version": "19.03"},
+                        "web": {"framework": "flask"},
+                    },
+                    "credential": {"root": "root"},
+                    "data": [],
+                },
+                {
+                    "ip": "172.17.0.3",
+                    "os": "Linux",
+                    "ports": {22: "ssh", 3306: "mysql"},
+                    "vulnerabilities": ["CVE-2012-2122"],
+                    "services": {
+                        "mysql": {"version": "5.5"},
+                    },
+                    "credential": {"root": "root"},
+                    "data": [],
+                },
+                {
+                    "ip": "172.17.0.4",
+                    "os": "Linux",
+                    "ports": {22: "ssh", 6379: "redis"},
+                    "vulnerabilities": ["CVE-2018-11218"],
+                    "services": {
+                        "redis": {"version": "4.0"},
+                    },
+                    "credential": {},
+                    "data": [],
+                },
+                {
+                    "ip": "172.17.0.5",
+                    "os": "Linux",
+                    "ports": {22: "ssh", 5432: "postgresql"},
+                    "vulnerabilities": ["CVE-2019-10149"],
+                    "services": {
+                        "postgresql": {"version": "11"},
+                    },
+                    "credential": {"postgres": "postgres"},
+                    "data": [],
+                },
+            ],
+            "real_target": [
+                # Generic structure - actual vulnerabilities unknown
+                {
+                    "ip": "10.0.0.10",
+                    "os": "Unknown",
+                    "ports": {},
+                    "vulnerabilities": [],
+                    "services": {},
+                    "credential": {},
+                    "data": [],
+                },
+                {
+                    "ip": "10.0.0.11",
+                    "os": "Unknown",
+                    "ports": {},
+                    "vulnerabilities": [],
+                    "services": {},
+                    "credential": {},
+                    "data": [],
+                },
+            ],
+        }
+        return configs.get(mode, configs["synthetic"])
 
     def reset(self) -> PenTestState:
         """Reset environment to initial state."""
@@ -238,15 +445,25 @@ class PenTestEnvironment:
             info["error"] = f"Vulnerability {cve_id} not present on host"
             return -0.5, False, info
 
-        # Exploit succeeds
-        self.state.compromised_hosts.add(host_ip)
-        self.state.privileges[host_ip] = "user"
-        self.state.vulnerabilities.setdefault(host_ip, []).append(cve_id)
+        # Success probability based on mode configuration
+        exploit_prob = self.mode_config["exploit_success_prob"]
 
-        reward = 5.0  # Big reward for successful exploitation
-        info["exploit_success"] = True
-        info["cve_id"] = cve_id
-        return reward, False, info
+        # Higher difficulty modes have lower success rates
+        if random.random() < exploit_prob:
+            # Exploit succeeds
+            self.state.compromised_hosts.add(host_ip)
+            self.state.privileges[host_ip] = "user"
+            self.state.vulnerabilities.setdefault(host_ip, []).append(cve_id)
+
+            reward = 5.0  # Big reward for successful exploitation
+            info["exploit_success"] = True
+            info["cve_id"] = cve_id
+            return reward, False, info
+        else:
+            reward = -0.5
+            info["exploit_success"] = False
+            info["error"] = "Exploitation failed"
+            return reward, False, info
 
     def _execute_brute_force(self, action: PenTestAction, info: Dict) -> Tuple[float, bool, Dict]:
         """Execute brute force attack."""
@@ -259,8 +476,12 @@ class PenTestEnvironment:
 
         creds = host.get("credential", {})
         if creds:
-            # Simulate finding correct credential (with some probability)
-            success_prob = 0.3 if host_ip not in self.state.compromised_hosts else 0.5
+            # Use mode-specific probability
+            success_prob = self.mode_config["brute_force_prob"]
+            # Bonus if already compromised (known user lists)
+            if host_ip in self.state.compromised_hosts:
+                success_prob += 0.2
+
             if random.random() < success_prob:
                 username = list(creds.keys())[0]
                 self.state.credentials[f"{host_ip}:{action.parameters.get('service', 'unknown')}"] = username
@@ -287,15 +508,14 @@ class PenTestEnvironment:
             info["error"] = "Target host not found"
             return -0.3, False, info
 
-        # Try to move using compromised credentials
-        success = False
-        if self.state.credentials:
-            # Higher success rate with more credentials
-            success_prob = min(0.8, len(self.state.credentials) * 0.2)
-            if random.random() < success_prob:
-                success = True
+        # Use mode-specific probability
+        success_prob = self.mode_config["lateral_success_prob"]
 
-        if success:
+        # Higher success rate with more credentials
+        if self.state.credentials:
+            success_prob = min(0.9, success_prob + len(self.state.credentials) * 0.1)
+
+        if random.random() < success_prob:
             self.state.compromised_hosts.add(target)
             self.state.privileges[target] = "user"
             reward = 4.0
@@ -324,9 +544,12 @@ class PenTestEnvironment:
             info["error"] = "Already at highest privilege"
             return -0.1, False, info
 
-        # Success probability based on vulnerabilities
+        # Use mode-specific probability
+        success_prob = self.mode_config["privesc_success_prob"]
+
+        # Bonus from vulnerabilities
         vulns = host.get("vulnerabilities", [])
-        success_prob = 0.4 + len(vulns) * 0.1
+        success_prob += len(vulns) * 0.05
 
         if random.random() < success_prob:
             os_type = host.get("os", "").lower()
@@ -418,10 +641,24 @@ class PenTestEnvironment:
         base = base_rewards.get(action.type, 0.1)
         return base if success else -0.3
 
+    def get_mode_config(self) -> dict:
+        """Get current simulation mode configuration."""
+        return {
+            "mode": self.simulation_mode,
+            **self.mode_config,
+        }
+
+    def get_mode_difficulty(self) -> float:
+        """Get difficulty rating for current mode (0.0 - 1.0)."""
+        return self.mode_config.get("difficulty", 0.5)
+
     def render(self) -> str:
         """Render current state as text."""
         lines = [
             f"=== Penetration Test State (Step {self.step_count}) ===",
+            f"Simulation Mode: {self.simulation_mode} "
+            f"(difficulty: {self.mode_config['difficulty']:.1f})",
+            "",
             self.state.summary(),
             "",
             "Compromised Hosts:",
