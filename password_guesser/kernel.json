@@ -1,0 +1,14 @@
+{
+    "display_name": "Password Guesser (Python 3)",
+    "language": "python",
+    "argv": [
+        "python",
+        "-m",
+        "password_guesser.kernel",
+        "-f",
+        "{connection_file}"
+    ],
+    "metadata": {
+        "debugger": true
+    }
+}
