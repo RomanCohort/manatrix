@@ -335,6 +335,9 @@ Available subcommands:
   output         Output formatting (table/json/csv/markdown/html)
   chart          Generate charts and visualizations (bar/line/pie/heatmap)
   export         Export reports with embedded charts (PNG/SVG/PDF/HTML/DOCX)
+  pipeline       Execute command pipelines (R's %>% equivalent)
+  flamegraph     Generate performance flamegraphs
+  demo           Run built-in demonstrations
   doc            Documentation and help system
   help           Show help for commands (with examples)
 """)
@@ -931,12 +934,13 @@ Available subcommands:
     # --- data ---
     data_parser = subparsers.add_parser("data", help="Data import/export utilities")
     data_parser.add_argument("--action", "-a", default="import",
-                            choices=["import", "export", "convert", "merge", "validate", "stats"],
+                            choices=["import", "export", "convert", "merge", "validate", "stats", "save", "load"],
                             help="Data action")
-    data_parser.add_argument("--input", "-i", required=True, help="Input file")
+    data_parser.add_argument("--input", "-i", default=None, help="Input file")
     data_parser.add_argument("--output", "-o", default=None, help="Output file")
     data_parser.add_argument("--format", "-f", default="auto",
-                            choices=["auto", "csv", "json", "yaml", "xml", "txt", "xlsx"],
+                            choices=["auto", "csv", "json", "yaml", "xml", "txt", "xlsx",
+                                     "pickle", "joblib", "npz", "npy"],
                             help="Input/output format")
     data_parser.add_argument("--fields", default=None, help="Fields to include (comma-separated)")
     data_parser.add_argument("--filter", default=None, help="Filter expression")
@@ -999,6 +1003,36 @@ Available subcommands:
     export_parser.add_argument("--include-graph", action="store_true", help="Include attack graph")
     export_parser.add_argument("--embed-images", action="store_true", help="Embed images as base64")
     export_parser.set_defaults(func=cmd_export)
+
+    # --- pipeline ---
+    pipeline_parser = subparsers.add_parser("pipeline", aliases=["chain"], help="Execute command pipelines")
+    pipeline_parser.add_argument("commands", nargs="+", help="Commands to execute in sequence")
+    pipeline_parser.add_argument("--output", "-o", default=None, help="Save pipeline results to file")
+    pipeline_parser.add_argument("--continue-on-error", action="store_true", help="Continue if a step fails")
+    pipeline_parser.add_argument("--parallel", action="store_true", help="Run commands in parallel")
+    pipeline_parser.set_defaults(func=cmd_pipeline)
+
+    # --- flamegraph ---
+    flame_parser = subparsers.add_parser("flamegraph", help="Generate performance flamegraphs")
+    flame_parser.add_argument("--action", "-a", default="record",
+                              choices=["record", "view", "compare", "live"],
+                              help="Flamegraph action")
+    flame_parser.add_argument("--pid", type=int, default=None, help="Process ID to profile")
+    flame_parser.add_argument("--output", "-o", default="flamegraph.svg", help="Output file")
+    flame_parser.add_argument("--duration", type=int, default=30, help="Recording duration (seconds)")
+    flame_parser.add_argument("--command", default=None, help="Command to profile")
+    flame_parser.add_argument("--format", default="svg",
+                              choices=["svg", "html", "json"],
+                              help="Output format")
+    flame_parser.set_defaults(func=cmd_flamegraph)
+
+    # --- demo ---
+    demo_parser = subparsers.add_parser("demo", help="Run built-in demonstrations")
+    demo_parser.add_argument("topic", nargs="?", default=None,
+                             choices=["password", "scan", "attack", "chart", "pipeline", "export", "all"],
+                             help="Demo topic to run")
+    demo_parser.add_argument("--interactive", "-i", action="store_true", help="Interactive demo mode")
+    demo_parser.set_defaults(func=cmd_demo)
 
     # --- doc ---
     doc_parser = subparsers.add_parser("doc", help="Documentation and help system")
@@ -6318,16 +6352,17 @@ def cmd_data(args):
     output_file = args.output
     fmt = args.format
 
-    if not input_file:
-        print("[!] Specify input file with --input")
-        return
-
-    if not os.path.exists(input_file):
-        print(f"[!] Input file not found: {input_file}")
-        return
+    if action in ["import", "validate", "stats", "load"]:
+        if not input_file:
+            print(f"[!] Specify input file with --input")
+            return
+        if not os.path.exists(input_file) and action != "load":
+            print(f"[!] Input file not found: {input_file}")
+            return
 
     print(f"\n[+] Data operation: {action}")
-    print(f"  Input: {input_file}")
+    if input_file:
+        print(f"  Input: {input_file}")
     print(f"  Format: {fmt}")
 
     if action == "import":
@@ -6335,12 +6370,20 @@ def cmd_data(args):
     elif action == "export":
         _data_export(input_file, output_file, fmt, args)
     elif action == "convert":
+        if not input_file:
+            print("[!] Specify input file with --input")
+            return
         _data_convert(input_file, output_file, fmt)
     elif action == "merge":
         _data_merge(input_file, output_file, args)
     elif action == "validate":
         _data_validate(input_file, fmt)
     elif action == "stats":
+        _data_stats(input_file, fmt)
+    elif action == "save":
+        _data_save_binary(output_file, fmt, args)
+    elif action == "load":
+        _data_load_binary(input_file, fmt, args)
         _data_stats(input_file, fmt)
 
 
@@ -6639,8 +6682,114 @@ def _detect_format(filename: str) -> str:
         ".yml": "yaml",
         ".xml": "xml",
         ".txt": "txt",
+        ".pickle": "pickle",
+        ".pkl": "pickle",
+        ".joblib": "joblib",
+        ".npz": "npz",
+        ".npy": "npy",
     }
     return formats.get(ext, "unknown")
+
+
+def _data_save_binary(output_file, fmt, args):
+    """Save data in binary format (pickle/joblib/npz)."""
+    if not output_file:
+        print("[!] Specify output file with --output")
+        return
+
+    input_file = args.input
+    if not input_file or not os.path.exists(input_file):
+        print("[!] Specify input data file with --input")
+        return
+
+    # Load input data
+    in_fmt = _detect_format(input_file)
+    data = _load_export_data(input_file)
+
+    print(f"  Saving as {fmt}...")
+
+    try:
+        if fmt in ("pickle", "auto") or output_file.endswith((".pickle", ".pkl")):
+            import pickle
+            with open(output_file, "wb") as f:
+                pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
+            size = os.path.getsize(output_file)
+            print(f"  [OK] Saved as pickle: {output_file} ({size / 1024:.1f} KB)")
+
+        elif fmt == "joblib" or output_file.endswith(".joblib"):
+            try:
+                import joblib
+                joblib.dump(data, output_file, compress=3)
+                size = os.path.getsize(output_file)
+                print(f"  [OK] Saved as joblib: {output_file} ({size / 1024:.1f} KB)")
+            except ImportError:
+                print("  [!] joblib not installed. Install with: pip install joblib")
+                return
+
+        elif fmt in ("npz", "npy") or output_file.endswith((".npz", ".npy")):
+            import numpy as np
+            if isinstance(data, dict):
+                # Save dict values as npz arrays
+                arrays = {}
+                for k, v in data.items():
+                    try:
+                        arrays[k] = np.array(v) if not isinstance(v, (str, dict)) else np.array(str(v))
+                    except Exception:
+                        arrays[k] = np.array(str(v))
+                np.savez_compressed(output_file, **arrays)
+            elif isinstance(data, list):
+                np.savez_compressed(output_file, data=np.array(data))
+            else:
+                np.save(output_file, np.array(data))
+
+            size = os.path.getsize(output_file)
+            print(f"  [OK] Saved as numpy: {output_file} ({size / 1024:.1f} KB)")
+
+    except Exception as e:
+        print(f"  [ERROR] {e}")
+
+
+def _data_load_binary(input_file, fmt, args):
+    """Load data from binary format."""
+    if not input_file or not os.path.exists(input_file):
+        print("[!] Specify input file with --input")
+        return
+
+    print(f"  Loading from {fmt}...")
+
+    try:
+        if fmt in ("pickle", "auto") or input_file.endswith((".pickle", ".pkl")):
+            import pickle
+            with open(input_file, "rb") as f:
+                data = pickle.load(f)
+            print(f"  [OK] Loaded pickle data: {type(data).__name__}")
+
+        elif fmt == "joblib" or input_file.endswith(".joblib"):
+            import joblib
+            data = joblib.load(input_file)
+            print(f"  [OK] Loaded joblib data: {type(data).__name__}")
+
+        elif fmt in ("npz", "npy") or input_file.endswith((".npz", ".npy")):
+            import numpy as np
+            loaded = np.load(input_file, allow_pickle=True)
+            if isinstance(loaded, np.lib.npyio.NpzFile):
+                print(f"  [OK] Loaded npz: {list(loaded.keys())}")
+                for key in loaded.keys():
+                    arr = loaded[key]
+                    print(f"    {key}: shape={arr.shape}, dtype={arr.dtype}")
+            else:
+                print(f"  [OK] Loaded npy: shape={loaded.shape}, dtype={loaded.dtype}")
+
+        # Save as JSON if output specified
+        output_file = args.output
+        if output_file:
+            if not isinstance(data, (str, bytes)):
+                with open(output_file, "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=2, default=str)
+                print(f"  [OK] Exported to {output_file}")
+
+    except Exception as e:
+        print(f"  [ERROR] {e}")
 
 
 def _write_csv(filename, data):
@@ -7108,6 +7257,310 @@ def _generate_plotly_chart(chart_type, data, title, args):
 
     fig.update_layout(title=title, width=args.width, height=args.height)
     return fig
+
+
+def cmd_pipeline(args):
+    """Execute command pipelines."""
+    commands = args.commands
+    continue_on_error = args.continue_on_error
+    output_file = args.output
+    parallel = args.parallel
+
+    print(f"\n[+] Pipeline: {len(commands)} commands")
+    print(f"  Parallel: {parallel}")
+    print(f"  Continue on error: {continue_on_error}\n")
+
+    results = []
+
+    if parallel:
+        # Run commands in parallel using subprocess
+        import concurrent.futures
+        import subprocess
+
+        def run_cmd(cmd_str):
+            parts = shlex.split(cmd_str)
+            start = time.time()
+            result = subprocess.run(
+                [sys.executable, "password_guesser/cli.py"] + parts,
+                capture_output=True, text=True
+            )
+            elapsed = time.time() - start
+            return cmd_str, result.returncode, elapsed, result.stdout[:500], result.stderr[:200]
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(commands)) as executor:
+            futures = {executor.submit(run_cmd, cmd): cmd for cmd in commands}
+            for future in concurrent.futures.as_completed(futures):
+                cmd_str, returncode, elapsed, stdout, stderr = future.result()
+                status = "OK" if returncode == 0 else "FAIL"
+                results.append((cmd_str, status, elapsed))
+                print(f"  [{status}] {cmd_str} ({elapsed:.2f}s)")
+                if returncode != 0 and stderr:
+                    print(f"    Error: {stderr[:100]}")
+    else:
+        # Sequential execution
+        for i, cmd_str in enumerate(commands, 1):
+            print(f"  [{i}/{len(commands)}] {cmd_str}")
+            parts = shlex.split(cmd_str)
+
+            start = time.time()
+            import subprocess
+            result = subprocess.run(
+                [sys.executable, "password_guesser/cli.py"] + parts,
+                capture_output=True, text=True
+            )
+            elapsed = time.time() - start
+
+            status = "OK" if result.returncode == 0 else "FAIL"
+            results.append((cmd_str, status, elapsed))
+
+            if result.stdout:
+                print(result.stdout[:500])
+            if result.returncode != 0:
+                print(f"    [!] Error: {result.stderr[:200]}")
+                if not continue_on_error:
+                    print("\n  [!] Pipeline stopped due to error")
+                    break
+            print(f"    ({elapsed:.2f}s)")
+
+    # Summary
+    print(f"\n{'=' * 50}")
+    print("Pipeline Summary:")
+    total_time = sum(r[2] for r in results)
+    for cmd_str, status, elapsed in results:
+        print(f"  [{status}] {cmd_str} ({elapsed:.2f}s)")
+    print(f"  Total: {total_time:.2f}s")
+
+    if output_file:
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump({
+                "pipeline": commands,
+                "results": [{"cmd": c, "status": s, "time": t} for c, s, t in results],
+                "total_time": total_time
+            }, f, indent=2)
+        print(f"  Results saved to {output_file}")
+
+
+def cmd_flamegraph(args):
+    """Generate performance flamegraphs."""
+    action = args.action
+    output_file = args.output
+
+    if action == "record":
+        print(f"\n[+] Recording flamegraph...")
+        print(f"  Duration: {args.duration}s")
+        print(f"  Output: {output_file}")
+
+        import cProfile
+        import pstats
+
+        # If a command is specified, profile it
+        if args.command:
+            cmd_parts = shlex.split(args.command)
+            profiler = cProfile.Profile()
+            profiler.enable()
+
+            import subprocess
+            start = time.time()
+            subprocess.run([sys.executable, "password_guesser/cli.py"] + cmd_parts)
+            elapsed = time.time() - start
+
+            profiler.disable()
+
+            # Generate flamegraph data
+            stats = pstats.Stats(profiler)
+            stats.sort_stats("cumulative")
+
+            if args.format == "json":
+                # Export as JSON for visualization
+                func_data = []
+                for func, (cc, nc, tt, ct, callers) in stats.stats.items():
+                    func_data.append({
+                        "function": f"{func[0]}:{func[1]}({func[2]})",
+                        "calls": nc,
+                        "total_time": ct,
+                        "self_time": tt,
+                    })
+                with open(output_file, "w") as f:
+                    json.dump(func_data, f, indent=2)
+            elif args.format == "svg":
+                # Generate SVG flamegraph
+                _generate_text_flamegraph(stats, output_file)
+            else:
+                # HTML format
+                _generate_html_flamegraph(stats, output_file)
+
+            print(f"  [OK] Flamegraph saved to {output_file}")
+        else:
+            print("  [INFO] Specify --command to profile a command")
+            print("  Example: flamegraph --command 'train -d data.txt' -o flame.svg")
+
+    elif action == "view":
+        if os.path.exists(output_file):
+            print(f"\n[+] Opening {output_file}...")
+            import webbrowser
+            webbrowser.open(output_file)
+        else:
+            print(f"  [!] File not found: {output_file}")
+
+    elif action == "compare":
+        print("\n[+] Compare profiling results...")
+        print("  Specify two .prof files to compare")
+
+    elif action == "live":
+        print("\n[+] Live profiling mode...")
+        print("  Monitoring system performance")
+        print("  Press Ctrl+C to stop\n")
+
+        try:
+            import psutil
+            import threading
+
+            stop_event = threading.Event()
+
+            def monitor():
+                while not stop_event.is_set():
+                    cpu = psutil.cpu_percent(interval=1)
+                    mem = psutil.virtual_memory()
+                    print(f"  CPU: {cpu:5.1f}% | MEM: {mem.percent:5.1f}% ({mem.used // (1024**3):.1f}/{mem.total // (1024**3):.1f} GB)")
+
+            monitor_thread = threading.Thread(target=monitor, daemon=True)
+            monitor_thread.start()
+
+            stop_event.wait(timeout=args.duration)
+            stop_event.set()
+
+        except ImportError:
+            print("  [!] psutil not installed. Install with: pip install psutil")
+        except KeyboardInterrupt:
+            print("\n  [+] Stopped")
+
+
+def _generate_text_flamegraph(stats, output_file):
+    """Generate a text-based flamegraph representation."""
+    lines = ["<!DOCTYPE html><html><head><style>",
+             "body { font-family: monospace; background: #1a1a2e; color: #eee; padding: 20px; }",
+             ".frame { display: inline-block; padding: 2px 6px; margin: 1px; border-radius: 3px; "
+             "cursor: pointer; font-size: 11px; }",
+             ".frame:hover { outline: 2px solid white; }",
+             "h1 { color: #e94560; }",
+             ".row { white-space: nowrap; margin: 2px 0; }",
+             "</style></head><body>",
+             "<h1>Flamegraph</h1>"]
+
+    # Sort by cumulative time
+    stats.sort_stats("cumulative")
+    func_list = stats.stats.items()
+
+    # Color palette
+    colors = ["#e94560", "#0f3460", "#16213e", "#533483", "#e94560",
+              "#f38181", "#fce38a", "#eaffd0", "#95e1d3", "#aa96da"]
+
+    for i, (func, (cc, nc, tt, ct, callers)) in enumerate(sorted(func_list, key=lambda x: -x[1][3])):
+        filename, line_no, funcname = func
+        width = max(int(ct * 200), 20)
+        color = colors[i % len(colors)]
+        pct = ct / max(sum(x[1][3] for x in func_list), 0.001) * 100
+        short_name = f"{os.path.basename(filename)}:{funcname}"
+        lines.append(
+            f'<div class="row"><span class="frame" style="background:{color};width:{width}px;" '
+            f'title="{filename}:{line_no} {funcname} - {ct:.3f}s ({pct:.1f}%)">'
+            f'{short_name[:40]}</span></div>'
+        )
+
+    lines.append("</body></html>")
+
+    with open(output_file, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+
+
+def _generate_html_flamegraph(stats, output_file):
+    """Generate HTML flamegraph."""
+    _generate_text_flamegraph(stats, output_file)
+
+
+def cmd_demo(args):
+    """Run built-in demonstrations."""
+    topic = args.topic
+
+    if not topic or topic == "all":
+        print("\n[+] Available demos:\n")
+        demos = ["password", "scan", "attack", "chart", "pipeline", "export"]
+        for d in demos:
+            print(f"  - {d}")
+        print("\nUsage: demo <topic>")
+        return
+
+    print(f"\n[+] Running demo: {topic}\n")
+
+    if topic == "password":
+        print("# Password Analysis Demo\n")
+        print("## Evaluating common passwords:\n")
+        passwords = ["password", "123456", "P@ssw0rd!", "MyDog+2024", "xK#9mP$vL2"]
+        for pwd in passwords:
+            score = _quick_score(pwd)
+            bar = "#" * (score // 10) + "-" * (10 - score // 10)
+            print(f"  {pwd:<20} [{bar}] {score}/100")
+
+    elif topic == "chart":
+        print("# Chart Demo\n")
+        print("Generating sample charts...\n")
+        demos = [
+            ("chart -o demo_bar.png --type bar --title 'Findings by Severity'", "bar chart"),
+            ("chart -o demo_pie.png --type pie --title 'Severity Distribution'", "pie chart"),
+            ("chart -o demo_line.svg --type line --title 'Trend Over Time'", "line chart"),
+        ]
+        for cmd, desc in demos:
+            print(f"  $ {cmd}")
+            print(f"  -> Generates {desc}\n")
+
+    elif topic == "pipeline":
+        print("# Pipeline Demo\n")
+        print("Chain commands together:\n")
+        print("  $ pipeline 'scan --target 192.168.1.1' 'evaluate' 'report -o report.html'")
+        print("  -> Executes scan -> evaluate -> report in sequence\n")
+        print("  $ scan 192.168.1.1 %>% evaluate %>% report -o report.html")
+        print("  -> Same pipeline using %>% operator (in REPL)\n")
+
+    elif topic == "export":
+        print("# Export Demo\n")
+        print("Export reports in multiple formats:\n")
+        print("  $ export -i session.json -o report.pdf --include-charts")
+        print("  $ export -i session.json -o slides.pptx")
+        print("  $ export -i session.json -o data.xlsx")
+
+    elif topic == "scan":
+        print("# Scan Demo\n")
+        print("Network scanning examples:\n")
+        print("  $ scan --target 192.168.1.1 --type quick")
+        print("  $ scan --target 192.168.1.0/24 --type full --detect_os")
+        print("  $ scan --target 10.0.0.1 --stealth --ports 22,80,443")
+
+    elif topic == "attack":
+        print("# Attack Demo\n")
+        print("Attack mode examples:\n")
+        print("  $ attack --target admin@192.168.1.100 --mode team")
+        print("  $ attack --target test@smtp.example.com --stealth")
+        print("  $ attack --target 192.168.1.100 --mode auto --report")
+
+
+def _quick_score(password: str) -> int:
+    """Quick password strength score (0-100)."""
+    score = 0
+    if len(password) >= 8:
+        score += 20
+    if len(password) >= 12:
+        score += 10
+    if any(c.islower() for c in password):
+        score += 10
+    if any(c.isupper() for c in password):
+        score += 10
+    if any(c.isdigit() for c in password):
+        score += 10
+    if any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in password):
+        score += 20
+    if len(set(password)) / max(len(password), 1) > 0.7:
+        score += 20
+    return min(100, score)
 
 
 def cmd_export(args):
@@ -8183,6 +8636,47 @@ def cmd_help(args):
                 "password-guesser export -i session.json -o report.pdf --include-charts",
                 "password-guesser export -i data.json -o presentation.pptx",
                 "password-guesser export -i findings.json -o report.html --include-graph",
+            ]
+        },
+        "pipeline": {
+            "usage": "password-guesser pipeline <cmd1> <cmd2> [options]",
+            "desc": "Execute command pipelines (R's %>% equivalent).",
+            "options": {
+                "commands": "Commands to execute in sequence",
+                "--output, -o": "Save pipeline results to file",
+                "--continue-on-error": "Continue if a step fails",
+                "--parallel": "Run commands in parallel",
+            },
+            "examples": [
+                "password-guesser pipeline 'scan --target 192.168.1.1' 'evaluate' 'report'",
+                "password-guesser pipeline 'chart' 'export' --parallel",
+            ]
+        },
+        "flamegraph": {
+            "usage": "password-guesser flamegraph --command <cmd> [options]",
+            "desc": "Generate performance flamegraphs.",
+            "options": {
+                "--action": "Action: record | view | compare | live",
+                "--command": "Command to profile",
+                "--output": "Output file (default: flamegraph.svg)",
+                "--duration": "Recording duration (default: 30s)",
+                "--format": "Format: svg | html | json",
+            },
+            "examples": [
+                "password-guesser flamegraph --command 'train -d data.txt' -o flame.svg",
+                "password-guesser flamegraph --action live --duration 60",
+            ]
+        },
+        "demo": {
+            "usage": "password-guesser demo [topic]",
+            "desc": "Run built-in demonstrations.",
+            "options": {
+                "topic": "password | scan | attack | chart | pipeline | export | all",
+            },
+            "examples": [
+                "password-guesser demo password",
+                "password-guesser demo chart",
+                "password-guesser demo all",
             ]
         },
         "config": {
