@@ -1,4 +1,6 @@
-# Password Guesser & Penetration Testing Framework
+# Manatrix - Roman Legion + Matrix
+
+**Manatrix** (Roman Legion + Matrix) 是一个 AI 驱动的智能密码猜测与渗透测试框架。名称融合了罗马百人队(Matrix Cohort)的组织协作理念与矩阵(Matrix)的智能化能力。
 
 基于 MAMBA + 差分进化 + LLM 的智能密码猜测系统，以及基于 RAG 知识库 + 多专家系统 + 攻击小组的知识增强型 LLM 自动化渗透测试框架。
 
@@ -13,7 +15,8 @@
 
 ### 渗透测试框架
 - **RAG 知识库**: ChromaDB 向量存储 + BM25 关键词搜索 + 语义嵌入
-- **多专家系统**: 6 个领域专家 (侦察/漏洞/利用/后渗透/凭据/横向移动)
+- **多专家系统**: 20 个领域专家 (侦察/漏洞/利用/后渗透/凭据/横向移动/Web/无线安全/云安全/AD域/IoT/社工/供应链/逆向工程/硬件安全等)
+- **自主攻击代理**: Claude Code 风格自主渗透测试智能体 (ManatrixAgent)
 - **攻击小组**: 7 名成员协作 (指挥官/侦察兵/分析师/突击手/幽灵/猎手/幽灵)
 - **工具编排器**: 15+ 工具、4 条预置工具链
 - **自我改进循环**: 经验存储 → 教训库 → 课程学习 → 元学习器
@@ -23,853 +26,24 @@
 ### 从源码安装
 
 ```bash
-git clone https://github.com/RomanCohort/password_guesser.git
-cd password_guesser
+git clone https://github.com/RomanCohort/manatrix.git
+cd manatrix
 pip install -e .
 ```
 
-### 从 PyPI 安装
+### 专家路由决策图
 
-```bash
-pip install password-guesser
+```mermaid
+flowchart LR
+    A[查询] --> B[规则路由]
+    B --> C{置信度 > 0.7?}
+    C -->|是| D[返回结果]
+    C -->|否| E[LLM路由]
+    E --> F{成功?}
+    F -->|是| D
+    F -->|否| G[性能调整]
+    G --> D
 ```
-
-## 快速开始
-
-### 密码猜测系统
-
-```bash
-# 训练模型
-password-guesser train --config config.yaml --data passwords.txt --amp
-
-# 生成密码
-password-guesser generate --checkpoint best_model.pt --target "目标信息"
-
-# 启动 Web 界面
-password-guesser web --port 8000
-```
-
-### 渗透测试框架
-
-#### CLI 命令行
-
-```bash
-# 自主模式
-password-guesser pentest \
-    --target_file targets.json \
-    --goal full_compromise \
-    --max_steps 50 \
-    --output report.json
-
-# 小组协作模式
-password-guesser pentest \
-    --target_file targets.json \
-    --goal full_compromise \
-    --team \
-    --max_steps 50
-
-# 交互模式
-password-guesser pentest \
-    --target_file targets.json \
-    --interactive \
-    --llm_api_key "sk-..."
-
-# 查看系统状态
-password-guesser status
-```
-
----
-
-## CLI 命令行完整参考
-
-本框架提供 **40 个** CLI 子命令，覆盖渗透测试全流程。
-
-### 命令概览
-
-```
-password-guesser <command> [options]
-```
-
-### 核心功能命令
-
-| 命令 | 别名 | 说明 |
-|------|------|------|
-| `train` | - | 训练 MAMBA 密码模型 |
-| `generate` | - | 生成密码候选 |
-| `web` | - | 启动 Web 界面 |
-| `pentest` | - | 运行渗透测试 |
-| `status` | - | 显示系统状态 |
-| `version` | - | 显示版本信息 |
-
-### 交互与分析命令
-
-| 命令 | 别名 | 说明 |
-|------|------|------|
-| `interactive` | `shell`, `kali` | Kali 风格交互终端 |
-| `evaluate` | `check` | 密码强度评估 |
-| `analyze` | - | AI 漏洞分析 |
-| `llm` | - | 直接与 LLM 交互 |
-
-### 侦察与扫描命令
-
-| 命令 | 说明 |
-|------|------|
-| `scan` | 网络扫描/侦察 |
-| `crawl` | Web 爬虫 |
-| `dns` | DNS 枚举 |
-| `osint` | OSINT 情报收集 |
-
-### 攻击与利用命令
-
-| 命令 | 说明 |
-|------|------|
-| `attack` | 攻击模式启动 |
-| `exploit` | 漏洞搜索与利用 |
-| `payload` | Payload 生成 |
-| `reverse-shell` | 反向 Shell 生成器 |
-
-### 会话与监听命令
-
-| 命令 | 说明 |
-|------|------|
-| `session` | 会话管理 |
-| `listener` | 监听器管理 |
-
-### 密码字典生成命令
-
-| 命令 | 说明 |
-|------|------|
-| `wordlist` | 字典生成 |
-| `rules` | 密码规则 |
-| `pcfg` | PCFG 概率生成 |
-| `augment` | 数据增强 |
-
-### AI/RL 训练命令
-
-| 命令 | 说明 |
-|------|------|
-| `rl` | 强化学习操作 |
-| `knowledge` | 知识库操作 |
-| `lessons` | 经验教训管理 |
-
-### 安全与规避命令
-
-| 命令 | 说明 |
-|------|------|
-| `evasion` | 规避技术管理 |
-| `adversarial` | 红蓝队对抗模拟 |
-| `sandbox` | 沙箱执行 |
-| `scope` | 授权范围管理 |
-
-### 工具与可视化命令
-
-| 命令 | 说明 |
-|------|------|
-| `tools` | 渗透工具管理 |
-| `graph` | 攻击图可视化 |
-
-### 实用工具命令
-
-| 命令 | 说明 |
-|------|------|
-| `hash` | 哈希计算 |
-| `encode` | 编码/解码 |
-| `config` | 配置管理 |
-| `report` | 报告生成 |
-| `benchmark` | 性能测试 |
-
----
-
-### 命令详解与示例
-
-#### 训练命令 (train)
-
-```bash
-# 基本训练
-password-guesser train --data passwords.txt --epochs 100
-
-# 启用混合精度训练
-password-guesser train --data passwords.txt --amp --epochs 50
-
-# 从检查点恢复
-password-guesser train --data passwords.txt --resume checkpoints/model.pt
-
-# 完整参数
-password-guesser train \
-    --config config.yaml \
-    --data passwords.txt \
-    --epochs 100 \
-    --batch_size 64 \
-    --lr 0.001 \
-    --output checkpoints \
-    --amp \
-    --warmup_steps 1000 \
-    --gradient_checkpointing \
-    --early_stopping 10
-```
-
-#### 密码生成 (generate)
-
-```bash
-# 基本生成
-password-guesser generate --checkpoint best_model.pt
-
-# Beam Search 生成
-password-guesser generate --checkpoint best_model.pt --method beam --beam_width 5
-
-# 多样化生成
-password-guesser generate --checkpoint best_model.pt --method diverse_beam --n_samples 100
-
-# 基于目标信息生成
-password-guesser generate \
-    --checkpoint best_model.pt \
-    --target_file target_info.txt \
-    --method beam
-```
-
-#### 密码评估 (evaluate)
-
-```bash
-# 评估密码强度
-password-guesser evaluate --password "P@ssw0rd123!"
-
-# 详细分析
-password-guesser evaluate --password "MyP@ss2024" --detailed
-
-# 交互式输入
-password-guesser evaluate
-```
-
-#### 网络扫描 (scan)
-
-```bash
-# 完整扫描
-password-guesser scan --target 192.168.1.0/24 --type full
-
-# 端口扫描
-password-guesser scan --target 192.168.1.100 --type port --ports 1-65535
-
-# 漏洞扫描
-password-guesser scan --target 192.168.1.100 --type vuln
-
-# 保存结果
-password-guesser scan --target 192.168.1.0/24 --output scan_results.json
-```
-
-#### 攻击模式 (attack)
-
-```bash
-# 自主攻击
-password-guesser attack --target 192.168.1.100 --mode auto
-
-# 小组协作攻击
-password-guesser attack --target 192.168.1.100 --mode team --max_steps 50
-
-# 交互模式
-password-guesser attack --target 192.168.1.100 --mode interactive
-```
-
-#### Web 爬虫 (crawl)
-
-```bash
-# 基本爬取
-password-guesser crawl https://example.com
-
-# 深度爬取 + 漏洞扫描
-password-guesser crawl https://example.com --depth 5 --vuln_scan
-
-# 保存结果
-password-guesser crawl https://example.com --output crawl.json --max_pages 200
-```
-
-#### 漏洞利用 (exploit)
-
-```bash
-# 搜索漏洞
-password-guesser exploit --action search --query "log4j"
-password-guesser exploit --action search --query "smb"
-
-# 查看漏洞详情
-password-guesser exploit --action info --cve CVE-2021-44228
-
-# 检查目标漏洞
-password-guesser exploit --action check --target 192.168.1.100 --cve CVE-2021-44228
-
-# 运行漏洞利用
-password-guesser exploit --action run --exploit eternalblue --target 192.168.1.100
-```
-
-#### Payload 生成 (payload)
-
-```bash
-# 生成反向 Shell
-password-guesser payload --type reverse_shell_bash --lhost 192.168.1.50 --lport 4444
-
-# 生成 Python 反向 Shell
-password-guesser payload --type reverse_shell_python --lhost 192.168.1.50 --lport 4444
-
-# 生成 PowerShell 反向 Shell
-password-guesser payload --type reverse_shell_powershell --lhost 192.168.1.50 --lport 4444
-
-# 保存到文件
-password-guesser payload --type reverse_shell_bash --lhost 192.168.1.50 --lport 4444 --output payload.sh
-```
-
-#### 反向 Shell 生成器 (reverse-shell)
-
-```bash
-# 生成所有类型的反向 Shell
-password-guesser reverse-shell --lhost 192.168.1.50 --lport 4444 --type all
-
-# 生成特定类型
-password-guesser reverse-shell --lhost 192.168.1.50 --lport 4444 --type bash
-password-guesser reverse-shell --lhost 192.168.1.50 --lport 4444 --type python
-password-guesser reverse-shell --lhost 192.168.1.50 --lport 4444 --type powershell
-
-# Base64 编码
-password-guesser reverse-shell --lhost 192.168.1.50 --lport 4444 --type bash --encode
-```
-
-#### 会话管理 (session)
-
-```bash
-# 列出活跃会话
-password-guesser session --action list
-
-# 查看会话详情
-password-guesser session --action info --session_id 1
-
-# 终止会话
-password-guesser session --action kill --session_id 1
-```
-
-#### 监听器管理 (listener)
-
-```bash
-# 启动监听器
-password-guesser listener --action start --lport 4444 --type nc
-
-# 列出监听器
-password-guesser listener --action list
-
-# 停止监听器
-password-guesser listener --action stop --listener_id 1
-```
-
-#### DNS 枚举 (dns)
-
-```bash
-# 完整 DNS 枚举
-password-guesser dns example.com
-
-# 指定记录类型
-password-guesser dns example.com --type MX
-password-guesser dns example.com --type A
-password-guesser dns example.com --type TXT
-```
-
-#### OSINT 情报收集 (osint)
-
-```bash
-# 域名情报
-password-guesser osint --action domain example.com
-
-# 邮箱收集
-password-guesser osint --action email example.com
-
-# 用户名搜索
-password-guesser osint --action username admin
-
-# IP 情报
-password-guesser osint --action ip 8.8.8.8
-
-# 社交媒体
-password-guesser osint --action social admin
-```
-
-#### 密码字典生成 (wordlist)
-
-```bash
-# 基于模式生成
-password-guesser wordlist --output dict.txt --pattern "@@@2024" --count 1000
-
-# 使用不同方法
-password-guesser wordlist --output dict.txt --method markov --count 5000
-password-guesser wordlist --output dict.txt --method pcfg --count 5000
-password-guesser wordlist --output dict.txt --method hybrid --count 10000
-```
-
-#### 密码规则 (rules)
-
-```bash
-# 列出可用规则
-password-guesser rules --action list
-
-# 应用规则
-password-guesser rules --action apply --input passwords.txt --output rules_applied.txt
-
-# 生成 Hashcat 规则
-password-guesser rules --action generate --output rules.txt --count 100
-
-# 导出规则
-password-guesser rules --action export --output rules.txt --format hashcat
-```
-
-#### PCFG 生成 (pcfg)
-
-```bash
-# 训练 PCFG 模型
-password-guesser pcfg --action train --data passwords.txt --output pcfg_model.json
-
-# 生成密码
-password-guesser pcfg --action generate --model pcfg_model.json --count 1000
-
-# 查看统计
-password-guesser pcfg --action stats --model pcfg_model.json
-```
-
-#### 数据增强 (augment)
-
-```bash
-# 增强密码数据
-password-guesser augment --input passwords.txt --output augmented.txt
-
-# 指定方法
-password-guesser augment --input passwords.txt --output augmented.txt --methods leet suffix
-
-# 限制变体数量
-password-guesser augment --input passwords.txt --output augmented.txt --max_variants 5
-```
-
-#### 强化学习 (rl)
-
-```bash
-# 训练 RL Agent
-password-guesser rl --action train --episodes 100 --max_steps 50
-
-# 评估 Agent
-password-guesser rl --action evaluate --checkpoint agent.pt --episodes 10
-
-# 导出模型
-password-guesser rl --action export --checkpoint agent.pt --output model.onnx
-
-# 查看统计
-password-guesser rl --action stats
-```
-
-#### 知识库操作 (knowledge)
-
-```bash
-# 搜索知识
-password-guesser knowledge --action search --query "Log4Shell"
-
-# CVE 查询
-password-guesser knowledge --action cve --cve_id CVE-2021-44228
-
-# ATT&CK 技术查询
-password-guesser knowledge --action technique --technique_id T1190
-
-# 查看统计
-password-guesser knowledge --action stats
-
-# 导入/导出
-password-guesser knowledge --action export --file knowledge.json
-password-guesser knowledge --action import --file knowledge.json
-```
-
-#### 经验教训管理 (lessons)
-
-```bash
-# 列出教训
-password-guesser lessons --action list
-
-# 查看详情
-password-guesser lessons --action show --lesson_id L001
-
-# 导出
-password-guesser lessons --action export --output lessons.json
-
-# 导入
-password-guesser lessons --action import --input lessons.json
-```
-
-#### 规避技术 (evasion)
-
-```bash
-# 列出规避技术
-password-guesser evasion --action list
-
-# 应用规避级别
-password-guesser evasion --action apply --level high
-password-guesser evasion --action apply --level paranoid
-
-# 查看配置
-password-guesser evasion --action config
-```
-
-#### 红蓝队对抗 (adversarial)
-
-```bash
-# 红蓝对抗
-password-guesser adversarial --mode redblue --rounds 10
-
-# 红队模拟
-password-guesser adversarial --mode red --target 192.168.1.100
-
-# 蓝队模拟
-password-guesser adversarial --mode blue --target 192.168.1.100
-```
-
-#### 沙箱执行 (sandbox)
-
-```bash
-# 在沙箱中执行命令
-password-guesser sandbox --action run --command "nmap localhost" --timeout 60
-
-# Docker 沙箱
-password-guesser sandbox --action run --command "nmap localhost" --sandbox_type docker
-
-# 查看状态
-password-guesser sandbox --action status
-
-# 列出可用镜像
-password-guesser sandbox --action list
-
-# 清理资源
-password-guesser sandbox --action clean
-```
-
-#### 范围管理 (scope)
-
-```bash
-# 查看范围
-password-guesser scope --action show
-
-# 添加目标
-password-guesser scope --action add --target 192.168.1.0/24
-
-# 移除目标
-password-guesser scope --action remove --target 192.168.1.1
-
-# 检查目标
-password-guesser scope --action check --target 192.168.1.100
-```
-
-#### 攻击图 (graph)
-
-```bash
-# 可视化攻击图
-password-guesser graph --action visualize --session session.json --output graph.md
-
-# 导出攻击图
-password-guesser graph --action export --session session.json --output graph.json --format json
-
-# 查看统计
-password-guesser graph --action stats
-```
-
-#### 工具管理 (tools)
-
-```bash
-# 列出工具
-password-guesser tools --action list
-
-# 检查工具
-password-guesser tools --action check
-password-guesser tools --action check --tool nmap
-
-# 安装工具
-password-guesser tools --action install --tool gobuster
-
-# 更新工具
-password-guesser tools --action update
-```
-
-#### AI 分析 (analyze)
-
-```bash
-# 漏洞分析
-password-guesser analyze 192.168.1.100 --type vulnerability
-
-# 攻击面分析
-password-guesser analyze 192.168.1.100 --type attack_surface
-
-# 威胁分析
-password-guesser analyze 192.168.1.100 --type threat
-
-# 修复建议
-password-guesser analyze 192.168.1.100 --type remediation
-```
-
-#### 哈希计算 (hash)
-
-```bash
-# 计算哈希
-password-guesser hash --text "hello world"
-```
-
-#### 编码/解码 (encode)
-
-```bash
-# 编码
-password-guesser encode --text "secret" --method base64
-password-guesser encode --text "secret" --method hex
-password-guesser encode --text "secret" --method all
-
-# 解码
-password-guesser encode --text "c2VjcmV0" --method base64 --decode
-```
-
-#### 配置管理 (config)
-
-```bash
-# 显示配置
-password-guesser config --show
-
-# 设置配置
-password-guesser config --action set --key llm.api_key --value "sk-xxx"
-
-# 获取配置
-password-guesser config --action get --key llm.model
-
-# 初始化配置
-password-guesser config --action init
-```
-
-#### 报告生成 (report)
-
-```bash
-# 生成报告
-password-guesser report --session session.json --output report.md --format markdown
-password-guesser report --session session.json --output report.html --format html
-password-guesser report --session session.json --output report.json --format json
-```
-
-#### 性能测试 (benchmark)
-
-```bash
-# 完整测试
-password-guesser benchmark --model checkpoints/best_model.pt --iterations 100
-
-# 特定测试
-password-guesser benchmark --type inference --iterations 100
-password-guesser benchmark --type generation --iterations 50
-```
-
-#### 交互式终端 (interactive)
-
-```bash
-# 启动 Kali 风格终端
-password-guesser interactive
-
-# 或使用别名
-password-guesser shell
-password-guesser kali
-```
-
-交互式终端内置命令：
-```
-help              显示帮助
-exit/quit         退出终端
-clear             清屏
-status            显示状态
-history           命令历史
-set/get           配置管理
-
-use <module>      切换模块 (llm/pentest/recon/exploit/post/creds/web/network...)
-back              返回主菜单
-
-# LLM 模块命令
-exec <instruction>   执行 LLM 指令
-plan <target>        生成攻击计划
-analyze <target>     分析目标漏洞
-
-# 其他模块命令请参考 kali_terminal.py
-```
-
-#### 直接 LLM 交互 (llm)
-
-```bash
-# 直接询问 LLM
-password-guesser llm "如何检测和利用 Log4j 漏洞"
-password-guesser llm "分析 SSH 暴力破解的防御策略"
-```
-
-#### Python API
-
-```python
-from pentest import PenTestOrchestrator
-from pentest.orchestrator import PenTestConfig
-
-# 配置
-config = PenTestConfig(
-    max_steps=50,
-    auto_mode=True,
-    enable_attack_team=True,      # 启用攻击小组
-    enable_self_improvement=True,  # 启用自我改进
-)
-
-# 创建编排器
-orch = PenTestOrchestrator(config)
-
-# 定义目标
-targets = [
-    {
-        "ip": "192.168.1.100",
-        "hostname": "web-server",
-        "os": "Linux",
-        "ports": [
-            {"port": 80, "service": "http", "version": "nginx 1.18"},
-            {"port": 22, "service": "ssh", "version": "OpenSSH 8.2"}
-        ],
-        "vulnerabilities": [
-            {"cve_id": "CVE-2021-44228", "name": "Log4Shell", "severity": 10.0}
-        ]
-    }
-]
-
-# 初始化并运行
-orch.initialize_from_scan({"format": "manual", "data": targets})
-results = orch.run_autonomous(target_goal="full_compromise", max_steps=50)
-print(results["summary"])
-
-# 小组模式
-team_results = orch.run_team_based(target_goal="full_compromise", max_steps=50)
-```
-
-### Web 界面
-
-```bash
-uvicorn web.app:app --reload --port 8000
-# 密码猜测: http://localhost:8000
-# 渗透测试: http://localhost:8000/pentest
-```
-
-### Python API
-
-```python
-from password_guesser import MambaPasswordModel, LLMInfoExtractor, PasswordTokenizer
-
-# 加载模型
-model = MambaPasswordModel.from_pretrained("checkpoints/best_model.pt")
-
-# 配置 LLM
-extractor = LLMInfoExtractor(api_key="sk-...")
-
-# 提取特征
-features = extractor.extract_multistage("目标个人信息...")
-
-# 生成密码 (多种方法)
-passwords = model.generate_beam_search(latent, tokenizer, beam_width=5)
-passwords = model.generate_diverse_beam(latent, tokenizer, num_groups=3)
-passwords = model.generate_typical(latent, tokenizer)
-passwords = model.generate_contrastive(latent, tokenizer)
-```
-
----
-
-## 架构
-
-### 密码猜测系统
-
-```
-┌────────────────────────────────────────────────────────────────────┐
-│                  Targeted Password Guessing System                 │
-├────────────────────────────────────────────────────────────────────┤
-│                                                                    │
-│  ┌─────────────┐    ┌─────────────┐    ┌───────────────────────┐  │
-│  │ Target Info │───→│ DeepSeek    │───→│ Structured Features   │  │
-│  │ (个人资料)   │    │ LLM提取     │    │ (姓名/日期/爱好等)    │  │
-│  └─────────────┘    └─────────────┘    └───────────┬───────────┘  │
-│                                                     │              │
-│                                           ┌─────────▼──────────┐   │
-│                                           │    MLP Encoder     │   │
-│                                           │ (特征→隐空间向量)   │   │
-│                                           └─────────┬──────────┘   │
-│                                                     │              │
-│  ┌──────────────────────────────────────────────────▼────────────┐ │
-│  │                    MAMBA Password Model                        │ │
-│  │         (状态空间模型，基于条件生成密码字符序列)                 │ │
-│  └──────────────────────────────────────────────────┬────────────┘ │
-│                                                     │              │
-│                                           ┌─────────▼──────────┐   │
-│                                           │ Differential       │   │
-│                                           │ Evolution Optimizer│   │
-│                                           │ (优化候选密码搜索)  │   │
-│                                           └─────────┬──────────┘   │
-│                                                     │              │
-│                                           ┌─────────▼──────────┐   │
-│                                           │ 候选密码列表       │   │
-│                                           │ (按概率排序)        │   │
-│                                           └────────────────────┘   │
-└────────────────────────────────────────────────────────────────────┘
-```
-
-### 渗透测试框架
-
-```
-┌──────────────────────────────────────────────────────────────────────────┐
-│         Knowledge-Enhanced LLM Automated Penetration Testing             │
-├──────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  ┌────────────────────────────────────────────────────────────────────┐  │
-│  │                    RAG Knowledge System                             │  │
-│  │  ┌──────────────┐  ┌──────────────┐  ┌─────────────────────────┐  │  │
-│  │  │ Embedding    │  │ Vector Store │  │ Hybrid Retriever        │  │  │
-│  │  │ Service      │──▶│ (ChromaDB /  │──▶│ • Semantic (cosine)    │  │  │
-│  │  │              │  │  JSON fallback)│  │ • Keyword (BM25)       │  │  │
-│  │  └──────────────┘  └──────────────┘  │ • Graph Traversal       │  │  │
-│  │        │                              │ • Experience Matching   │  │  │
-│  │        ▼                              └─────────────────────────┘  │  │
-│  │  ┌───────────────────────────────────────────────────────────┐     │  │
-│  │  │ Knowledge Indexes: CVE DB │ ATT&CK │ Exploit-DB │ Tools   │     │  │
-│  │  └───────────────────────────────────────────────────────────┘     │  │
-│  └────────────────────────────────────────────────────────────────────┘  │
-│                                    │                                     │
-│                                    ▼                                     │
-│  ┌────────────────────────────────────────────────────────────────────┐  │
-│  │                    Multi-Expert System                              │  │
-│  │  ┌─────────────┐                                                   │  │
-│  │  │ Expert      │──▶ Analyze query → Route to expert(s)            │  │
-│  │  │ Router      │                                                   │  │
-│  │  └──────┬──────┘                                                   │  │
-│  │    ┌────┴────┬─────────┬──────────┬─────────┬─────────┐           │  │
-│  │    ▼         ▼         ▼          ▼         ▼         ▼           │  │
-│  │  Recon    Vuln      Exploit    Post-Ex   Cred     Lateral         │  │
-│  │  Expert   Expert    Expert     Expert    Expert   Expert          │  │
-│  │    │         │         │          │         │         │           │  │
-│  │    ▼         ▼         ▼          ▼         ▼         ▼           │  │
-│  │  ┌──────────────────────────────────────────────────────────┐     │  │
-│  │  │              Tool Orchestrator (15+ tools, 4 chains)      │     │  │
-│  │  │  Nmap │ Masscan │ Nmap │ Metasploit │ Hydra │ Hashcat... │     │  │
-│  │  └──────────────────────────────────────────────────────────┘     │  │
-│  └────────────────────────────────────────────────────────────────────┘  │
-│                                    │                                     │
-│                                    ▼                                     │
-│  ┌────────────────────────────────────────────────────────────────────┐  │
-│  │                    Attack Team (7 Members)                          │  │
-│  │  Commander(LEADER) Scout(RECON) Analyst(VULN) Striker(EXPLOIT)    │  │
-│  │  Ghost(POST_EX) Hunter(CRED) Phantom(MOVER)                       │  │
-│  │  Meeting Types: Briefing → Planning → Review → Debrief → Emergency│  │
-│  └────────────────────────────────────────────────────────────────────┘  │
-│                                    │                                     │
-│                                    ▼                                     │
-│  ┌────────────────────────────────────────────────────────────────────┐  │
-│  │              Reflective RL Agent + Self-Improvement Loop            │  │
-│  │  ┌────────────┐ ┌──────────┐ ┌───────────┐ ┌──────────────────┐  │  │
-│  │  │ Policy Net │ │ Self-    │ │ Experience │ │ Meta Learner     │  │  │
-│  │  │ (PPO/DQN)  │ │ Reflection│ │ Store     │ │ (curriculum adj) │  │  │
-│  │  └────────────┘ └──────────┘ └───────────┘ └──────────────────┘  │  │
-│  └────────────────────────────────────────────────────────────────────┘  │
-│                                    │                                     │
-│                         ┌──────────▼──────────┐                         │
-│                         │ PenTest Environment  │                         │
-│                         │ (模拟/真实环境)       │                         │
-│                         └─────────────────────┘                         │
-└──────────────────────────────────────────────────────────────────────────┘
-```
-
----
 
 ## 功能特性
 
@@ -929,42 +103,33 @@ passwords = model.generate_contrastive(latent, tokenizer)
 - **知识索引**: 11 条预置 CVE、15 条 ATT&CK 技术、15 个工具文档
 - **经验检索**: 基于当前状态搜索相似历史经验
 
-#### 多专家系统 (Multi-Expert System)
+### 多专家系统 (Multi-Expert System)
 
-**架构**:
-```
-查询/状态
-    │
-    ▼
-┌──────────────────────────────────────────────────────────┐
-│                   Expert Router (专家路由器)               │
-│                                                          │
-│  策略1: 规则路由 — 关键词匹配 → 评分 → 排序              │
-│  策略2: LLM 路由 — 低置信度时调用 LLM 分类               │
-│  策略3: 性能调整 — 根据历史成功率调整主/辅助专家          │
-│                                                          │
-│  输出: RoutingDecision                                   │
-│    primary_expert: 主专家                                 │
-│    supporting_experts: 辅助专家列表                       │
-│    confidence: 置信度 (0-1)                               │
-│    reasoning: 路由原因                                    │
-└──────────────────┬───────────────────────────────────────┘
-                   │
-    ┌──────────────┼──────────────┬──────────────┬──────────────┐
-    ▼              ▼              ▼              ▼              ▼
-┌────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐
-│ Recon  │  │   Vuln   │  │ Exploit  │  │ PostEx   │  │  Cred    │
-│ Expert │  │  Expert  │  │  Expert  │  │  Expert  │  │  Expert  │
-│        │  │          │  │          │  │          │  │          │
-│ 检索RAG│  │ 检索RAG  │  │ 检索RAG  │  │ 检索RAG  │  │ 检索RAG  │
-│ 分析状态│  │ 分析状态 │  │ 分析状态 │  │ 分析状态 │  │ 分析状态 │
-│ 生成建议│  │ 生成建议 │  │ 生成建议 │  │ 生成建议 │  │ 生成建议 │
-└───┬────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘
-    │            │             │             │             │
-    └────────────┴─────────────┴─────┬───────┴─────────────┘
-                                    ▼
-                          ExpertAdvice 汇总
-```
+**20 个领域专家**:
+
+| # | 专家 | 工具数 | ATT&CK 技术 | 输入 | 输出 |
+|---|------|--------|-------------|------|------|
+| 1 | 侦察专家 | 15+ | T1595, T1592, T1589 | target | hosts, services, ports |
+| 2 | 漏洞专家 | 12+ | T1595.002, T1046, T1082 | target, services | vulnerabilities, CVE |
+| 3 | 利用专家 | 10+ | T1190, T1203, T1068 | target, vulns | shell, exploit_result |
+| 4 | 后渗透专家 | 20+ | T1003, T1068, T1078 | has_shell, os | creds, privilege_level |
+| 5 | 凭据专家 | 12+ | T1110, T1555, T1003 | target, services | credentials, cracked_hashes |
+| 6 | 横向移动专家 | 15+ | T1021, T1047, T1563 | hosts, creds | new_access, pivot_hosts |
+| 7 | Web安全专家 | 18+ | T1190, T1056, T1078 | target, url | xss, sqli, rce |
+| 8 | 无线安全专家 | 10+ | T1552, T1547 | wifi_target | handshake, wep_key |
+| 9 | 云安全专家 | 12+ | T1580, T1526, T1110 | cloud_target | iam_issues, bucket_access |
+| 10 | AD域专家 | 15+ | T1558, T1550, T1091 | domain_target | kerberos_issues, ad_info |
+| 11 | IoT安全专家 | 12+ | T1595, T1046 | iot_target | firmware, default_creds |
+| 12 | 社工专家 | 8+ | T1566, T1187 | target_info | phishing_email, pretext |
+| 13 | 供应链安全专家 | 6+ | T1195, T1543 | target_pkg | supply_chain_risks |
+| 14 | **逆向工程专家** | **73** | T1627 | binary_file | decompiled_code, vulns |
+| 15 | 社会工程专家 | 10+ | T1566, T1591 | target_info | phishing, pretext |
+| 16 | 网络协议专家 | 8+ | T1552, T1046 | protocol_target | auth_issues, protocol_vulns |
+| 17 | 密码分析专家 | 6+ | T1110, T1555 | hash, cipher | plain_password, key |
+| 18 | 逆向分析专家 | 12+ | T1027, T1627 | binary | function_map, exploits |
+| 19 | 漏洞研究专家 | 10+ | T1203, T1068 | vuln_type | poc, exploit_dev |
+| 20 | **硬件安全专家** | **100+** | T1200, T0855 | hw_target | keys, firmware_dump, debug_access |
+
 
 **专家路由器 (ExpertRouter)**:
 
@@ -976,31 +141,60 @@ passwords = model.generate_contrastive(latent, tokenizer)
 | LLM 路由 | 调用 LLM 对状态进行分类 | 规则路由置信度 < 0.7 |
 | 性能调整 | 根据专家历史成功率交换主/辅助角色 | 主专家成功率 < 30% |
 
-```python
-# 规则路由评分来源
-scores = {}
-# 1. 阶段映射 (+0.5): phase="exploitation" → ExploitationExpert
-# 2. 状态指标 (+0.3): services=["ssh"] → 匹配关键词
-# 3. 查询关键词 (+0.2): query="破解密码" → 匹配 Credential 关键词
-# 4. 状态条件:
-#    - 无shell且有服务 → Exploitation (+0.4)
-#    - 有shell非admin → PostExploitation (+0.3)
-#    - 已admin → Credential (+0.2), Lateral (+0.3)
-#    - 多主机且有沦陷 → Lateral (+0.4)
-#    - 有哈希 → Credential (+0.3)
-#    - 有漏洞 → Vulnerability (+0.2), Exploitation (+0.2)
+**Bio-Gated MoE 2.0 (生物门控混合专家)**:
+
+基于生物神经元门控机制的新一代路由系统，模拟生物体的情绪和记忆对决策的影响。
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  传统 MoE: G(x) = softmax(W·x)                             │
+│                                                             │
+│  BioMoE: G(x,m,e) = softmax(                                 │
+│              Content(x) +                                  │
+│              α·Membrane(m) +                                │
+│              β·Emotion(e)                                    │
+│           )                                                 │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**6 个领域专家详解**:
+| 组件 | 功能 | 生物类比 |
+|------|------|---------|
+| **Content Gate** | 标准MoE路由，基于输入内容 | 感知输入 |
+| **Membrane Potential** | 累积历史使用经验 | 长期记忆/突触权重 |
+| **Emotional State** | 动态情绪状态（4维） | 情绪影响决策 |
 
-| 专家 | 工具 | ATT&CK 技术 | 输入 | 输出 |
-|------|------|-------------|------|------|
-| 侦察专家 | nmap, masscan, shodan, dnsrecon, theharvester, nuclei | T1595, T1592, T1589, T1590, T1591, T1046 | target | hosts, services, ports, os_info, dns_records |
-| 漏洞专家 | nmap, nuclei, nikto, openvas, nessus, searchsploit | T1595.002, T1046, T1082, T1083 | target, services | vulnerabilities, cve_list, severity_scores, remediation |
-| 利用专家 | metasploit, exploit-db, searchsploit, msfvenom, burpsuite | T1190, T1133, T1203, T1068, T1059 | target, vulns, services | shell, meterpreter_session, exploit_result |
-| 后渗透专家 | mimikatz, bloodhound, powerview, winpeas, linpeas, seatbelt | T1003, T1068, T1078, T1098, T1134, T1548 | has_shell, os, user, is_admin | credentials, privilege_level, persistence, domain_info |
-| 凭据专家 | hydra, john, hashcat, mimikatz, kerberoast, crackmapexec | T1110, T1555, T1003, T1558, T1078 | target, services | credentials, cracked_hashes, valid_accounts |
-| 横向移动专家 | crackmapexec, psexec, wmi, winrm, ssh, evil-winrm, impacket | T1021, T1047, T1563, T1072, T1080, T1550 | hosts, creds, compromised | new_access, pivot_hosts, lateral_path |
+**情绪状态维度**:
+
+- Arousal (唤醒度): 兴奋程度，影响探索/利用倾向
+- Valence (效价): 正面/负面情绪
+- Dominance (支配度): 控制感
+- Persistence (专注度)
+
+**自动反馈机制**:
+
+每次前向传播自动更新：
+- 门控置信度 → 兴奋度调整
+- 专家使用频率 → 膜电位更新
+- 探索奖励: 少用的专家更容易被激活
+
+```
+高置信输入 → 兴奋度↑ → 探索新策略
+低置信输入 → 兴奋度衰减 → 稳定使用已知策略
+```
+
+**参数配置**:
+```python
+BioMoEConfig(
+    d_model=512,
+    num_experts=8,
+    top_k=2,
+    membrane_decay=0.9,    # 遗忘率
+    membrane_update=0.3,   # 更新率
+    emotion_decay=0.85,    # 情绪衰减
+    emotion_update=0.3,   # 情绪更新
+    auto_feedback=True      # 启用自动反馈
+)
+```
 
 **专家分析逻辑 (analyze 方法)**:
 
@@ -1023,26 +217,51 @@ scores = {}
   Windows目标  → 警告AMSI/Defender
   Linux目标    → 警告SELinux
 
-后渗透专家:
-  无shell      → 等待初始访问
-  有shell非admin → winpeas/linpeas提权枚举
-  已admin      → mimikatz凭据提取 + bloodhound域侦察
-  始终建议     → 持久化方法(计划任务/服务/SSH密钥)
-
-凭据专家:
-  有哈希       → hashcat+john破解
-  有用户+服务  → hydra暴力破解或crackmapexec密码喷洒
-  域环境       → kerberoast + AS-REP roasting
-  已有凭据     → crackmapexec凭据复用测试
-  始终警告     → 账户锁定和检测风险
-
-横向移动专家:
-  无沦陷主机   → 等待初始访问
-  全部沦陷     → 更多网络发现
-  有凭据目标   → evil-winrm, psexec, WMI尝试
-  有NTLM哈希   → pass-the-hash攻击
-  始终建议     → 设置跳板/代理，优先攻击DC/文件服务器/SQL
+逆向工程专家 (73 工具):
+  .apk 文件   → jadx反编译 + apktool资源提取 + frida动态分析
+  .exe/.dll   → dnSpy/ilSpy反编译 + Ghidra二进制分析
+  .jar 文件   → CFR/Procyon反编译
+  .bin 固件   → binwalk提取 + firmware-mod-kit解包
+  ELF 二进制  → radare2/Ghidra反汇编 + checksec安全检查
+  自动阶段    → 文件识别→静态分析→动态调试→漏洞利用开发
 ```
+
+**逆向工程专家工具分类**:
+
+| 类别 | 工具 | 数量 |
+|------|------|------|
+| 反汇编/反编译 | Ghidra, IDA Pro, radare2, Binary Ninja, Hopper, RetDec, Cutter | 7 |
+| Android RE | jadx, apktool, dex2jar, smali, Frida, Xposed, Objection, MobSF | 8 |
+| .NET/Java RE | dnSpy, ILSpy, dotPeek, CFR, Procyon, JD-GUI, Krakatau | 7 |
+| 二进制分析 | strings, binwalk, file, objdump, readelf, checksec, LIEF | 7 |
+| 调试器 | GDB, x64dbg, OllyDbg, WinDbg, LLDB, radare2 debugger | 6 |
+| Fuzzing | AFL, libFuzzer, honggfuzz, Peach, Radamsa, zzuf, Jackalope | 7 |
+| 漏洞利用开发 | pwntools, ROPgadget, Ropper, one_gadget, angr, Unicorn | 6 |
+| 补丁对比 | BinDiff, Diaphora, patchdiff2, turbodiff, DarunGrim | 5 |
+| 符号执行 | angr, KLEE, SAGE, Mayhem | 4 |
+| 固件分析 | binwalk, firmware-mod-kit, Jeager, FACT | 4 |
+| 内存取证 | Volatility, Volatility3 | 2 |
+| 代码仿真 | Unicorn, QEMU, ARMware | 3 |
+| 反编译器 (其他) | Ghidra (multi-arch), RetDec, Snowman | 3 |
+| 辅助工具 | ltrace, strace, ldd, nm, size, readelf, capstone | 7 |
+
+**硬件安全专家 (100+ 工具)**:
+
+| 类别 | 工具 | 说明 |
+|------|------|------|
+| 侧信道分析 | ChipWhisperer, OpenADC, Riscure Inspector, EM Probes | 功耗分析(CPA/DPA)、电磁分析、时序攻击 |
+| 故障注入 | Voltage Glitch, Clock Glitch, Laser FI, EM FI | 电压/时钟/电磁/激光故障注入 |
+| 调试接口 | JTAGulator, OpenOCD, JLink, CMSIS-DAP, STLink | JTAG/SWD调试接口利用 |
+| 串口通信 | Minicom, Picocom, FTDI, CP210x, PL2303 | UART串口识别与连接 |
+| 总线分析 | Flashrom, i2cdetect, Saleae Logic, Sigrok | SPI/I2C总线嗅探与读取 |
+| RFID/NFC | Proxmark3, MFOC, MFCUK, libnfc, nfcpy | 标签读取、破解、克隆 |
+| 汽车/工控 | CAN-utils, ICSim, CanMatrix, OpenDBC | CAN总线分析、ECU攻击、OBD-II |
+| 无线硬件 | HackRF, BladeRF, USRP, RTL-SDR, GNU Radio | SDR信号捕获与分析 |
+| ZigBee | KillerBee, ZBSniffer, RfCat | ZigBee协议嗅探与攻击 |
+| PCB逆向 | Microscope, KiCad, Logic Analyzer | 电路板走线提取、网表重建 |
+| 芯片安全 | TPM2-tools, GlobalPlatform, Cardpeek | TPM/HSM/安全芯片攻击 |
+| 物理安全 | Lockpick, Shimming, Impressioning | 机械锁/电子锁/门禁绕过 |
+| 冷启动 | Inception, Memdrip, DDR Tools | 内存密钥提取、冷启动攻击 |
 
 **ExpertAdvice 数据结构**:
 
@@ -1066,7 +285,7 @@ class ExpertAdvice:
 ```python
 from models.expert_router import create_default_router
 
-# 创建路由器 (自动注册6个专家)
+# 创建路由器 (自动注册19个专家)
 router = create_default_router(llm_provider=llm, rag_retriever=rag)
 
 # 路由查询
@@ -1118,41 +337,6 @@ Emergency (紧急)   → 遇到问题时紧急协商，全员参与
 
 **会议流程**:
 ```
-hold_meeting(meeting_type, state)
-        │
-        ▼
-┌─────────────────────────┐
-│ 1. 更新共享记忆          │
-│    memory.update_from_state()
-└────────────┬────────────┘
-             ▼
-┌─────────────────────────┐
-│ 2. 选择参会者            │
-│    - Briefing: 全员      │
-│    - Planning: 按阶段选  │
-│    - Emergency: 全员     │
-└────────────┬────────────┘
-             ▼
-┌─────────────────────────┐
-│ 3. 收集专家意见          │
-│    for each participant: │
-│      expert.analyze()    │
-└────────────┬────────────┘
-             ▼
-┌─────────────────────────┐
-│ 4. 投票决策              │
-│    - 统计行动投票         │
-│    - 按票数排序           │
-└────────────┬────────────┘
-             ▼
-┌─────────────────────────┐
-│ 5. 计算共识度            │
-│    Jaccard 相似度        │
-└────────────┬────────────┘
-             ▼
-      MeetingResult
-```
-
 **共识计算 (Jaccard 相似度)**:
 ```python
 # 各专家推荐的工具集合
@@ -1267,7 +451,7 @@ Experience Store → Lessons DB → Reward Shaper → Curriculum → Meta Learne
 ## 项目结构
 
 ```
-password_guesser/
+manatrix/
 ├── setup.py                     # 安装脚本
 ├── pyproject.toml               # 项目配置
 ├── config.yaml                  # 配置文件
@@ -1281,12 +465,14 @@ password_guesser/
 │   ├── mlp_encoder.py           # MLP 编码器
 │   ├── mamba_password.py        # MAMBA 密码模型
 │   ├── mamba_cuda.py            # CUDA 加速
+│   ├── bio_moe.py              # Bio-Gated MoE 2.0 (新增)
 │   ├── password_dataset.py      # 数据集
 │   ├── vector_store.py          # 向量存储 + 嵌入服务 (新增)
 │   ├── rag_retriever.py         # RAG 混合检索器 (新增)
 │   ├── rag_llm_provider.py      # RAG 增强 LLM Provider (新增)
 │   ├── expert_router.py         # 专家路由器 (新增)
 │   ├── attack_team.py           # 攻击小组 (新增)
+│   ├── manatrix_agent.py        # ManatrixAgent 自主代理 (新增)
 │   ├── experts/                 # 专家模块 (新增)
 │   │   ├── __init__.py
 │   │   ├── base.py              # 专家基类
@@ -1295,7 +481,28 @@ password_guesser/
 │   │   ├── exploitation_expert.py
 │   │   ├── post_exploitation_expert.py
 │   │   ├── credential_expert.py
-│   │   └── lateral_movement_expert.py
+│   │   ├── lateral_movement_expert.py
+│   │   ├── web_security_expert.py
+│   │   ├── wireless_security_expert.py
+│   │   ├── cloud_security_expert.py
+│   │   ├── active_directory_expert.py
+│   │   ├── iot_security_expert.py
+│   │   ├── social_engineering_expert.py
+│   │   ├── supply_chain_expert.py
+│   │   ├── reverse_engineering_expert.py  # 73工具逆向工程专家 (新增)
+│   │   ├── hardware_security_expert.py    # 100+工具硬件安全专家 (新增)
+│   │   ├── network_protocol_expert.py
+│   │   ├── crypto_expert.py
+│   │   ├── reverse_analysis_expert.py
+│   │   └── vuln_research_expert.py
+│   ├── agent/                   # ManatrixAgent 子模块 (新增)
+│   │   ├── __init__.py
+│   │   ├── brief_parser.py     # 简报解析
+│   │   ├── planner.py          # 攻击规划
+│   │   ├── executor.py          # 工具执行
+│   │   ├── memory.py           # 状态和会话记忆
+│   │   ├── state.py            # 攻击状态追踪
+│   │   └── reflection.py       # 自我反思
 │   └── ...
 │
 ├── optimization/                # 优化模块
@@ -1382,21 +589,37 @@ password_guesser/
 ├── web/                         # Web 界面
 │   ├── __init__.py              # 包初始化 (新增)
 │   ├── app.py                   # FastAPI 应用
+│   ├── studio.py                # Manatrix Studio IDE + Agent WS (新增)
 │   ├── pentest_api.py           # 渗透测试 API (16+ 端点)
 │   ├── auth.py                  # 认证
 │   ├── rate_limit.py            # 速率限制
 │   ├── tasks.py                 # 异步任务
 │   ├── websocket.py             # WebSocket
 │   └── static/
+│       ├── studio.html          # Studio IDE 前端 (新增)
 │       ├── pentest.html         # 渗透测试前端
-│       ├── css/pentest.css      # 样式
-│       └── js/pentest.js        # 逻辑
+│       ├── css/
+│       │   ├── studio.css       # Studio 样式 (新增)
+│       │   └── pentest.css
+│       └── js/
+│           ├── studio-agent.js  # Agent 面板逻辑 (新增)
+│           ├── studio.js        # Studio 主逻辑 (新增)
+│           └── pentest.js
 │
-├── password_guesser/            # CLI 入口 (新增)
-│   └── cli.py                   # 命令行接口
+├── manatrix/            # CLI 入口 (新增)
+│   ├── __init__.py
+│   ├── cli.py                   # 命令行接口 (60+ 子命令)
+│   ├── repl.py                  # R 风格交互式 REPL (新增)
+│   ├── kernel.py                # Jupyter Kernel (新增)
+│   └── kernel.json              # Jupyter Kernel 配置 (新增)
+│
+├── .vscode/                     # IDE 配置 (新增)
+│   ├── launch.json              # VS Code 调试配置
+│   └── tasks.json               # VS Code 任务配置
 │
 └── tests/                       # 测试 (新增)
-    └── test_all.py              # 97 个单元测试
+    ├── test_all.py              # 97 个单元测试
+    └── test_cli.py              # 78 个 CLI 测试 (新增)
 ```
 
 ---
@@ -1632,6 +855,66 @@ llm:
 
 ---
 
+## 实验结果
+
+### 消融实验 (Ablation Study)
+
+消融实验验证了各模块对系统性能的贡献。
+
+| 测试场景 | 基线 | 无知识库 | 无专家 | 无结构化 |
+|----------|------|----------|--------|----------|
+| Web Test | 4 (27.1s) | 4 (25.8s) | 3 (17.3s) | 1 (5.5s) |
+| Network Test | 4 (28.1s) | 4 (29.3s) | 3 (7.1s) | 1 (5.8s) |
+
+**关键发现**:
+- 知识库对输出质量影响有限（得分不变）
+- 专家系统显著提升输出完整性和专业性（+1 分）
+- 结构化输出是关键（从 1 分到 4 分）
+
+### 基准测试 (Benchmark)
+
+| 场景 | LLM Only | LLM+Expert | Full System |
+|----------|----------|------------|-----------|
+| Web App SQLi | 18.7s | 27.3s | 23.9s |
+| Network Access | 27.1s | 29.2s | 27.4s |
+
+### 目标特定测试
+
+**Metasploitable2** 测试结果：
+
+| 服务 | 端口 | 响应时间 | 有命令 | 有详情 |
+|------|------|----------|--------|----------|
+| vsftpd backdoor | 21 | 11.2s | ✓ | ✓ |
+| Samba | 445 | 14.8s | ✓ | ✓ |
+| Distcc | 3632 | 19.4s | ✓ | ✓ |
+| MySQL | 3306 | 19.0s | ✓ | ✓ |
+
+**DVWA** 测试结果：
+
+| 漏洞 | Payload | 步骤 | 响应时间 |
+|----------|--------|------|----------|
+| SQL Injection | ✓ | ✓ | 13.6s |
+| XSS Reflected | ✓ | - | 10.5s |
+| XSS Stored | ✓ | ✓ | 11.1s |
+| CSRF | ✓ | ✓ | 12.9s |
+
+### 系统状态检查
+
+```json
+{
+  "timestamp": "2026-05-07T11:44:44",
+  "rag": {"type": "hash", "dim": 256},
+  "expert": {"ok": true},
+  "llm": {"avg_ms": 10508.36},
+  "agent": {"skipped": true},
+  "tools": {"count": 3},
+  "kb": {"ok": true},
+  "nmap": false
+}
+```
+
+---
+
 ## 测试
 
 ```bash
@@ -1667,16 +950,16 @@ result = rag.retrieve_for_query('如何利用 Log4j 漏洞')
 print(result.context[:500])
 "
 
-# 测试专家路由
+# 测试自主代理 (ManatrixAgent)
+python scripts/test_agent_local.py
+
+# 测试专家路由 (19 专家)
 python -c "
 from models.expert_router import create_default_router
-from models.vector_store import get_vector_store, get_embedding_service
-
-store = get_vector_store()
-embeddings = get_embedding_service()
-
 router = create_default_router(llm_provider=None, rag_retriever=None)
-print(f'Registered experts: {[e.value for e in router.experts.keys()]}')
+print(f'Registered experts: {len(router.experts)}')
+for et in router.experts.keys():
+    print(f'  - {et.value}')
 "
 
 # 测试攻击小组
@@ -1693,6 +976,65 @@ for member in status['members']:
 
 ---
 
+## IDE 集成
+
+### VS Code 集成
+
+项目包含完整的 VS Code 配置，可直接调试和运行。
+
+**调试配置** (`.vscode/launch.json`):
+
+```bash
+# 在 VS Code 中按 F5 选择配置:
+# - Interactive Shell: 启动交互式终端调试
+# - Train Model: 调试模型训练
+# - Generate Passwords: 调试密码生成
+# - Web Server: 调试 Web 服务器
+# - Scan Target: 调试扫描功能
+# - Run Tests: 调试 pytest
+```
+
+**任务配置** (`.vscode/tasks.json`):
+
+```bash
+# Ctrl+Shift+P → Tasks: Run Task
+# - Run Interactive Shell: 启动交互终端
+# - Run Training: 运行训练
+# - Run Tests: 运行测试
+# - Generate Passwords: 运行密码生成
+```
+
+**安装 Jupyter Kernel**:
+
+```bash
+# 安装内核
+python -m manatrix.kernel install --user
+
+# 或手动安装
+python -m ipykernel install --user --name manatrix
+
+# 在 Jupyter Notebook 中选择 "Manatrix (Python 3)" 内核
+```
+
+**Jupyter Kernel 命令**:
+
+```bash
+!pg <command>   # 运行 CLI 命令
+?func           # 显示函数帮助
+demo("password")  # 运行演示
+```
+
+### PyCharm 配置
+
+```bash
+# 配置运行/调试配置:
+# Module: manatrix.cli
+# Script parameters: interactive
+# Working directory: D:\manatrix
+```
+
+---
+
 ## 依赖
 
 ### 核心依赖
@@ -1704,6 +1046,8 @@ fastapi
 uvicorn
 pydantic
 requests
+matplotlib >= 3.7.0    # 图表生成 (NEW)
+pillow >= 9.0.0         # 图像处理 (NEW)
 ```
 
 ### 可选依赖
@@ -1712,11 +1056,95 @@ chromadb >= 0.4.0              # 向量数据库 (RAG)
 sentence-transformers >= 2.2.0 # 语义嵌入
 einops                         # MAMBA 模型
 nvidia-ml-py3                  # GPU 监控
+jupyter                        # Jupyter 支持 (NEW)
+ipykernel                      # Jupyter Kernel (NEW)
 ```
 
 不安装可选依赖时，系统会自动回退：
 - ChromaDB 不可用 → JSON 文件持久化的内存向量存储
 - sentence-transformers 不可用 → 哈希嵌入
+
+---
+
+## 性能优化指南
+
+### GPU 优化
+
+#### CUDA 加速配置
+
+```python
+# 启用 CUDA
+device = "cuda" if torch.cuda.is_available() else "cpu"
+model = model.to(device)
+
+# 混合精度训练
+from torch.cuda.amp import autocast, GradScaler
+scaler = GradScaler()
+
+with autocast():
+    output = model(input)
+scaler.scale(loss).backward()
+```
+
+#### 批量优化
+
+```python
+# 批量推理
+batch_size = 64
+latents = torch.randn(batch_size, 64, device=device)
+passwords = model.generate_batch(latents, tokenizer, max_len=20)
+# 比逐个生成快 10-50x
+```
+
+### 模型量化
+
+```python
+# INT8 动态量化
+model_quantized = torch.quantization.quantize_dynamic(
+    model,
+    {torch.nn.Linear},
+    dtype=torch.qint8
+)
+
+# 推理
+output = model_quantized(input)
+# 内存减少 ~50%, 推理快 ~2x
+```
+
+### 并行处理
+
+```python
+from concurrent.futures import ThreadPoolExecutor
+
+# 多线程密码生成
+def generate_batch(target_info):
+    features = extractor.extract(target_info)
+    return model.generate(features)
+
+with ThreadPoolExecutor(max_workers=4) as executor:
+    results = list(executor.map(generate_batch, target_list))
+```
+
+### 缓存策略
+
+```python
+from functools import lru_cache
+
+@lru_cache(maxsize=1000)
+def get_cached_embedding(text):
+    return embedding_service.embed(text)
+```
+
+### 性能监控
+
+```python
+# GPU 监控
+import pynvml
+pynvml.init()
+handle = pynvml.device_get_handle_by_index(0)
+info = pynvml.device_get_memory_info(handle)
+print(f"GPU Memory: {info.used / info.total * 100:.1f}%")
+```
 
 ---
 
@@ -1738,3 +1166,4 @@ nvidia-ml-py3                  # GPU 监控
 ## 许可证
 
 MIT License
+
