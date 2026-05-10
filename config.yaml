@@ -1,6 +1,6 @@
 llm:
   api_base: https://api.deepseek.com/v1
-  api_key: YOUR_API_KEY
+  api_key: sk-f76d77af2d434f38a2f957ef8a98d860
   model: deepseek-chat
   provider: deepseek
 model:

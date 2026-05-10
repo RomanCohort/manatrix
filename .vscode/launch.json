@@ -6,7 +6,7 @@
             "name": "Interactive Shell",
             "type": "debugpy",
             "request": "launch",
-            "module": "password_guesser.cli",
+            "module": "manatrix.cli",
             "args": ["interactive"],
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}"
@@ -15,7 +15,7 @@
             "name": "Train Model",
             "type": "debugpy",
             "request": "launch",
-            "module": "password_guesser.cli",
+            "module": "manatrix.cli",
             "args": ["train", "--data", "passwords.txt", "--epochs", "10"],
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}"
@@ -24,7 +24,7 @@
             "name": "Generate Passwords",
             "type": "debugpy",
             "request": "launch",
-            "module": "password_guesser.cli",
+            "module": "manatrix.cli",
             "args": ["generate", "--checkpoint", "checkpoints/best_model.pt", "--target", "target"],
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}"
@@ -33,7 +33,7 @@
             "name": "Web Server",
             "type": "debugpy",
             "request": "launch",
-            "module": "password_guesser.cli",
+            "module": "manatrix.cli",
             "args": ["web", "--port", "8000"],
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}"
@@ -42,7 +42,7 @@
             "name": "Scan Target",
             "type": "debugpy",
             "request": "launch",
-            "module": "password_guesser.cli",
+            "module": "manatrix.cli",
             "args": ["scan", "--target", "192.168.1.1"],
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}"

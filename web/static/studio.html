@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manatrix Studio</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Studio CSS -->
+    <link rel="stylesheet" href="/static/css/studio.css">
+
+    <!-- Xterm.js -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
+
+    <!-- Monaco Editor -->
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
+
+    <style>
+        /* Override Xterm styles for dark theme */
+        .xterm {
+            padding: 8px;
+            height: 100%;
+        }
+        .xterm-viewport {
+            overflow-y: auto !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="studio-container" id="app">
+
+        <!-- Menu Bar -->
+        <div class="menubar">
+            <div class="menubar-brand">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+                <span>Manatrix</span>
+            </div>
+            <div class="menubar-items">
+                <div class="menubar-item" data-menu="file">File</div>
+                <div class="menubar-item" data-menu="edit">Edit</div>
+                <div class="menubar-item" data-menu="view">View</div>
+                <div class="menubar-item" data-menu="run">Run</div>
+                <div class="menubar-item" data-menu="tools">Tools</div>
+                <div class="menubar-item" data-menu="help">Help</div>
+            </div>
+            <div class="menubar-spacer"></div>
+            <div class="menubar-actions">
+                <button class="menubar-btn" id="themeBtn" title="Toggle Theme">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                    </svg>
+                </button>
+                <button class="menubar-btn" id="settingsBtn" title="Settings">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <div class="toolbar-group">
+                <button class="toolbar-btn" id="newFileBtn" title="New File (Ctrl+N)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="12" y1="18" x2="12" y2="12"/>
+                        <line x1="9" y1="15" x2="15" y2="15"/>
+                    </svg>
+                    New
+                </button>
+                <button class="toolbar-btn" id="openFileBtn" title="Open File (Ctrl+O)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    Open
+                </button>
+                <button class="toolbar-btn" id="saveBtn" title="Save (Ctrl+S)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                        <polyline points="17 21 17 13 7 13 7 21"/>
+                        <polyline points="7 3 7 8 15 8"/>
+                    </svg>
+                    Save
+                </button>
+            </div>
+            <div class="toolbar-group">
+                <button class="toolbar-btn run" id="runBtn" title="Run (Ctrl+Enter)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                    Run
+                </button>
+                <button class="toolbar-btn stop" id="stopBtn" title="Stop" style="display:none;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    </svg>
+                    Stop
+                </button>
+            </div>
+            <div class="toolbar-spacer"></div>
+            <div class="toolbar-status">
+                <span class="status-dot" id="connectionDot"></span>
+                <span id="connectionText">Connecting...</span>
+                <span class="menubar-spacer" style="width: 16px;"></span>
+                <span id="cursorPos">Ln 1, Col 1</span>
+            </div>
+        </div>
+
+        <!-- Main Content (4 panels) -->
+        <div class="main-content" id="mainContent">
+
+            <!-- Left Sidebar: File Browser -->
+            <aside class="sidebar" id="leftSidebar">
+                <div class="sidebar-header">
+                    <span>FILES</span>
+                    <div class="sidebar-actions">
+                        <button class="sidebar-action" id="refreshFilesBtn" title="Refresh">&#x21bb;</button>
+                        <button class="sidebar-action" id="newFolderBtn" title="New Folder">&#x002B;</button>
+                    </div>
+                </div>
+                <div class="sidebar-content">
+                    <div class="file-tree" id="fileTree">
+                        <div class="file-item folder active" data-path=".">
+                            <span class="file-icon">&#x1F4C1;</span>
+                            <span class="file-name">workspace</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Environment Preview -->
+                <div class="env-section" id="envPreview" style="border-top: 1px solid var(--studio-border);">
+                    <div class="env-section-header" id="envHeader">
+                        <span>ENVIRONMENT</span>
+                        <span style="font-size:10px;">&#x25BC;</span>
+                    </div>
+                    <div class="env-section-content" id="envContent" style="display:none;">
+                        <div class="env-item">
+                            <span class="env-item-name">.Last</span>
+                            <span class="env-item-value" id="lastValue">NULL</span>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Center: Source Editor -->
+            <div class="editor-panel" id="editorPanel">
+                <div class="editor-tabs" id="editorTabs">
+                    <!-- Tabs will be added dynamically -->
+                    <div class="editor-tab active" data-tab="welcome">
+                        <span class="editor-tab-icon">&#x1F4AC;</span>
+                        <span>Welcome</span>
+                    </div>
+                </div>
+                <div class="editor-content" id="editorContent">
+                    <!-- Welcome Screen -->
+                    <div class="editor-placeholder" id="welcomeScreen">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                        </svg>
+                        <h3>Manatrix Studio</h3>
+                        <p>
+                            RStudio-like IDE for Manatrix CLI<br><br>
+                            <strong>Quick Actions:</strong><br>
+                            <kbd>Ctrl</kbd>+<kbd>Enter</kbd> Run current line/selection<br>
+                            <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> Command Palette<br>
+                            <kbd>Ctrl</kbd>+<kbd>S</kbd> Save file<br>
+                            <kbd>Ctrl</kbd>+<kbd>N</kbd> New file<br>
+                            <kbd>Ctrl</kbd>+<kbd>L</kbd> Clear console<br>
+                            <kbd>Ctrl</kbd>+<kbd>/</kbd> Toggle comment<br>
+                            <kbd>F1</kbd> Command Palette<br>
+                            <br>
+                            <strong>Try these commands:</strong><br>
+                            <span class="mono text-primary">? train</span> - Get help on training<br>
+                            <span class="mono text-primary">demo chart</span> - See chart demo<br>
+                            <span class="mono text-primary">chart --type pie</span> - Generate pie chart<br>
+                            <span class="mono text-primary">cve --search log4j</span> - CVE lookup<br>
+                            <span class="mono text-primary">attack-pattern --tactics</span> - ATT&CK tactics
+                        </p>
+                    </div>
+                    <div id="monaco-editor" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Right Sidebar: Environment + History -->
+            <aside class="sidebar right" id="rightSidebar">
+                <div class="sidebar-header">
+                    <span>ENVIRONMENT</span>
+                    <div class="sidebar-actions">
+                        <button class="sidebar-action" id="refreshEnvBtn" title="Refresh">&#x21bb;</button>
+                    </div>
+                </div>
+                <div class="sidebar-content">
+
+                    <!-- Variables Section -->
+                    <div class="env-section">
+                        <div class="env-section-header">
+                            <span>&#x1F4CA; Variables</span>
+                            <span style="font-size:10px;">&#x25BC;</span>
+                        </div>
+                        <div class="env-section-content" id="variablesPanel">
+                            <div class="env-item" style="color: var(--studio-text-muted); font-style: italic;">
+                                No variables defined
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- .Last.value Section -->
+                    <div class="env-section">
+                        <div class="env-section-header">
+                            <span>&#x1F4DD; .Last.value</span>
+                        </div>
+                        <div class="env-section-content">
+                            <div class="env-item" id="lastValuePanel">
+                                <span class="env-item-value" style="color: var(--studio-text-muted);">
+                                    NULL
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- History Section -->
+                    <div class="env-section">
+                        <div class="env-section-header">
+                            <span>&#x1F4DC; History</span>
+                            <div class="sidebar-actions">
+                                <button class="sidebar-action" id="clearHistoryBtn" title="Clear">&#x2715;</button>
+                            </div>
+                        </div>
+                        <div class="env-section-content" id="historyPanel" style="max-height: 200px; overflow-y: auto;">
+                            <div class="history-item" style="color: var(--studio-text-muted); font-style: italic;">
+                                No history yet
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Plots Section -->
+                    <div class="env-section">
+                        <div class="env-section-header">
+                            <span>&#x1F4C8; Plots</span>
+                            <div class="sidebar-actions">
+                                <button class="sidebar-action" id="clearPlotsBtn" title="Clear">&#x2715;</button>
+                            </div>
+                        </div>
+                        <div class="env-section-content" id="plotsPanel" style="padding: 8px; text-align: center;">
+                            <img id="lastPlotPreview" style="max-width: 100%; max-height: 120px; display: none; border-radius: 4px;" alt="Last plot">
+                            <div style="color: var(--studio-text-muted); font-size: 11px; margin-top: 8px;" id="plotsPlaceholder">
+                                No plots yet<br>
+                                <span style="font-size:10px;">Run 'chart' commands to see plots here</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Git Section -->
+                    <div class="env-section" id="gitSection">
+                        <div class="env-section-header" id="gitSectionHeader">
+                            <span>&#x1F4BB; Git</span>
+                            <span style="font-size:10px;">&#x25BC;</span>
+                        </div>
+                        <div class="env-section-content" id="gitSectionContent">
+                            <div class="git-status-bar" id="gitStatusBar">
+                                <span class="git-branch" id="gitBranch">--</span>
+                                <span class="git-ahead-behind" id="gitAheadBehind"></span>
+                            </div>
+                            <div class="git-actions">
+                                <button class="git-action-btn" id="gitPullBtn" title="Pull">&#x2193; Pull</button>
+                                <button class="git-action-btn" id="gitPushBtn" title="Push">&#x2191; Push</button>
+                                <button class="git-action-btn" id="gitCommitBtn" title="Commit">&#x2714; Commit</button>
+                            </div>
+                            <div class="git-files" id="gitFiles">
+                                <div class="git-files-header">CHANGES</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Agent Section (Autonomous Attack) -->
+                    <div class="env-section" id="agentSection">
+                        <div class="env-section-header" id="agentSectionHeader">
+                            <span>&#x1F916; Agent</span>
+                            <span style="font-size:10px;">&#x25BC;</span>
+                        </div>
+                        <div class="env-section-content" id="agentSectionContent">
+                            <!-- Agent Brief Input -->
+                            <div class="agent-brief-area">
+                                <textarea id="agentBrief" placeholder="Enter attack brief...&#10;e.g., Scan 192.168.1.0/24 for web services" rows="3"></textarea>
+                            </div>
+                            <div class="agent-controls">
+                                <button class="agent-btn primary" id="agentStartBtn">
+                                    <span>&#x25B6;</span> Start
+                                </button>
+                                <button class="agent-btn" id="agentPauseBtn" disabled>
+                                    <span>&#x23F8;</span> Pause
+                                </button>
+                                <button class="agent-btn danger" id="agentStopBtn" disabled>
+                                    <span>&#x23F9;</span> Stop
+                                </button>
+                            </div>
+                            <!-- Agent Status -->
+                            <div class="agent-status" id="agentStatus">
+                                <span class="status-indicator idle"></span>
+                                <span id="agentStatusText">Idle</span>
+                            </div>
+                            <!-- Agent Progress -->
+                            <div class="agent-progress" id="agentProgress" style="display:none;">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="agentProgressFill"></div>
+                                </div>
+                                <div class="progress-text" id="agentProgressText">Phase: --</div>
+                            </div>
+                            <!-- Agent Actions Log -->
+                            <div class="agent-actions" id="agentActions">
+                                <div class="agent-actions-header">Actions</div>
+                                <div class="agent-actions-list" id="agentActionsList">
+                                    <div class="agent-action-placeholder">No actions yet</div>
+                                </div>
+                            </div>
+                            <!-- Agent Results Summary -->
+                            <div class="agent-summary" id="agentSummary" style="display:none;">
+                                <div class="summary-item">
+                                    <span class="summary-label">Hosts:</span>
+                                    <span class="summary-value" id="agentHosts">0</span>
+                                </div>
+                                <div class="summary-item">
+                                    <span class="summary-label">Vulns:</span>
+                                    <span class="summary-value" id="agentVulns">0</span>
+                                </div>
+                                <div class="summary-item">
+                                    <span class="summary-label">Creds:</span>
+                                    <span class="summary-value" id="agentCreds">0</span>
+                                </div>
+                                <div class="summary-item">
+                                    <span class="summary-label">Shells:</span>
+                                    <span class="summary-value" id="agentShells">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </aside>
+        </div>
+
+        <!-- Console Panel -->
+        <div class="console-panel" id="consolePanel">
+            <div class="console-header" id="consoleHeader">
+                <div class="console-title">
+                    <span>&#x1F5A5; <span id="consoleModeLabel">MANATRIX</span></span>
+                    <span id="consoleSession" style="color: var(--studio-text-muted); font-weight: normal;"></span>
+                </div>
+                <div class="console-actions">
+                    <div class="repl-switcher" id="replSwitcher">
+                        <button class="repl-btn active" data-mode="manatrix" title="Manatrix CLI">M</button>
+                        <button class="repl-btn" data-mode="python" title="Python REPL">Py</button>
+                        <button class="repl-btn" data-mode="shell" title="Shell">$</button>
+                    </div>
+                    <button class="console-action" id="clearConsoleBtn" title="Clear (Ctrl+L)">Clear</button>
+                    <button class="console-action" id="interruptBtn" title="Interrupt">Interrupt</button>
+                    <button class="console-action" id="toggleConsoleBtn" title="Toggle">&#x25BC;</button>
+                </div>
+            </div>
+            <div class="console-content" id="consoleContent">
+                <div id="terminal"></div>
+            </div>
+        </div>
+
+        <!-- Output Panel -->
+        <div class="output-panel" id="outputPanel">
+            <div class="output-tabs">
+                <button class="output-tab active" data-tab="output">
+                    <span>&#x1F4CB;</span> Output
+                </button>
+                <button class="output-tab" data-tab="plots">
+                    <span>&#x1F4C8;</span> Plots
+                </button>
+                <button class="output-tab" data-tab="help">
+                    <span>&#x2753;</span> Help
+                </button>
+                <button class="output-tab" data-tab="trace">
+                    <span>&#x1F50D;</span> Traceback
+                </button>
+                <button class="output-tab" data-tab="rendered">
+                    <span>&#x1F310;</span> Rendered
+                </button>
+            </div>
+            <div class="output-content" id="outputContent">
+                <div class="output-text" id="outputText" style="height: 100%;">
+                    <span style="color: var(--studio-accent-primary);">Manatrix Studio</span> ready.
+                    Type commands in the terminal below or use the <span class="text-primary">Run</span> button.
+                </div>
+                <div class="output-plot hidden" id="outputPlots" style="height: 100%;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; width: 100%; height: 100%; overflow: auto; padding: 8px;" id="plotsGrid">
+                        <!-- Charts will be added here -->
+                    </div>
+                </div>
+                <div class="output-text hidden" id="outputHelp" style="height: 100%; overflow: auto;">
+                    <span style="color: var(--studio-accent-info);">=== Manatrix Studio Help ===</span>
+
+                    <br><br><span class="text-primary">R-Style Commands:</span>
+                    <br>  ? &lt;command&gt;     Show help for a command
+                    <br>  ?? &lt;keyword&gt;    Search commands
+                    <br>  ls              List files in workspace
+                    <br>  cd &lt;dir&gt;       Change directory
+                    <br>  getwd           Get working directory
+                    <br>  rm &lt;var&gt;       Remove a variable
+                    <br>  rm --all        Clear all variables
+                    <br>  save.image      Save workspace
+                    <br>  options         Show options
+                    <br>  demo &lt;name&gt;    Run a demo
+                    <br>  .Last           Show last result
+
+                    <br><br><span class="text-primary">Panel Focus:</span>
+                    <br>  Ctrl+1    Focus editor
+                    <br>  Ctrl+2    Focus console
+                    <br>  Ctrl+3    Focus output panel
+                    <br>  Ctrl+4    Toggle file browser (left sidebar)
+                    <br>  Ctrl+5    Toggle environment (right sidebar)
+                    <br>  Ctrl+B    Toggle left sidebar
+                    <br>  Ctrl+J    Toggle console panel
+
+                    <br><br><span class="text-primary">Editor Shortcuts:</span>
+                    <br>  Ctrl+Enter      Run current line/selection
+                    <br>  Ctrl+S          Save file
+                    <br>  Ctrl+N          New file
+                    <br>  Ctrl+O          Open file
+                    <br>  Ctrl+W          Close current tab
+                    <br>  Ctrl+/          Toggle comment
+                    <br>  Ctrl+D          Duplicate line
+                    <br>  Ctrl+Shift+K    Delete line
+                    <br>  Alt+Up/Down     Move line up/down
+                    <br>  Ctrl+F          Find
+                    <br>  Ctrl+H          Find &amp; Replace
+                    <br>  Ctrl+Tab        Next tab
+                    <br>  Ctrl+Shift+Tab  Previous tab
+
+                    <br><br><span class="text-primary">Console Shortcuts:</span>
+                    <br>  Ctrl+L       Clear console
+                    <br>  Ctrl+T       Toggle theme
+                    <br>  Up/Down      History navigation
+                    <br>  Tab          Autocomplete
+
+                    <br><br><span class="text-primary">General:</span>
+                    <br>  Ctrl+Shift+P  Command Palette
+                    <br>  F1            Command Palette
+                    <br>  Escape        Close palette/menu
+
+                    <br><br><span class="text-primary">Themes:</span>
+                    <br>  Dark, Light, Matrix, Nord, Solarized
+                    <br>  Click the moon icon in menu bar to switch
+
+                    <br><br><span class="text-primary">Chart Types:</span>
+                    <br>  bar, line, pie, scatter, histogram, heatmap, radar, bubble, treemap
+
+                    <br><br><span class="text-primary">Workspace:</span>
+                    <br>  Workspace auto-saves every 30 seconds
+                    <br>  Tabs, theme, and history are restored on reload
+                    <br>  Right-click tabs for close menu options
+                </div>
+                <div class="output-text hidden" id="outputTrace" style="height: 100%; overflow: auto;">
+                    No traceback available.
+                </div>
+                <div class="hidden" id="outputRendered" style="height: 100%; overflow: auto; padding: 16px;">
+                    <!-- Rendered HTML will appear here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="statusbar">
+            <div class="statusbar-left">
+                <span class="statusbar-item" id="statusMessage">Ready</span>
+                <span class="statusbar-item separator"></span>
+                <span class="statusbar-item" id="statusSession">Session: --</span>
+            </div>
+            <div class="statusbar-right">
+                <span class="statusbar-item" id="statusCwd">cwd: --</span>
+                <span class="statusbar-item separator"></span>
+                <span class="statusbar-item" id="statusPanels">Source | Console | Output</span>
+                <span class="statusbar-item separator"></span>
+                <span class="statusbar-item">Manatrix Studio v1.0</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay hidden" id="settingsModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3>Settings</h3>
+                <button class="modal-close" id="settingsCloseBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <h4>LLM Configuration</h4>
+                    <p style="font-size:11px;color:var(--studio-text-muted);margin-bottom:12px;">
+                        Required for Agent autonomous attacks. The API key is stored locally.
+                    </p>
+                    <div class="settings-field">
+                        <label for="settingsProvider">Provider</label>
+                        <select id="settingsProvider">
+                            <option value="deepseek">DeepSeek</option>
+                            <option value="openai">OpenAI</option>
+                            <option value="anthropic">Anthropic</option>
+                            <option value="local">Local (Ollama)</option>
+                        </select>
+                    </div>
+                    <div class="settings-field">
+                        <label for="settingsApiKey">API Key</label>
+                        <input type="password" id="settingsApiKey" placeholder="sk-..." autocomplete="off">
+                    </div>
+                    <div class="settings-field">
+                        <label for="settingsModel">Model</label>
+                        <input type="text" id="settingsModel" placeholder="deepseek-chat">
+                    </div>
+                    <div class="settings-field">
+                        <label for="settingsBaseUrl">Base URL <span style="font-size:10px;color:var(--studio-text-muted);">(optional)</span></label>
+                        <input type="text" id="settingsBaseUrl" placeholder="https://api.deepseek.com/v1">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="agent-btn" id="settingsCancelBtn">Cancel</button>
+                <button class="agent-btn primary" id="settingsSaveBtn">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Command Palette (hidden by default) -->
+    <div class="command-palette hidden" id="commandPalette">
+        <input type="text" class="command-palette-input" id="paletteInput" placeholder="Type a command or search...">
+        <div class="command-palette-list" id="paletteList">
+            <!-- Commands will be added dynamically -->
+        </div>
+    </div>
+
+    <!-- Studio JS (load in dependency order) -->
+    <script src="/static/js/studio-core.js"></script>
+    <script src="/static/js/studio-terminal.js"></script>
+    <script src="/static/js/studio-pyodide.js"></script>
+    <script src="/static/js/studio-editor.js"></script>
+    <script src="/static/js/studio-files.js"></script>
+    <script src="/static/js/studio-git.js"></script>
+    <script src="/static/js/studio-snippets.js"></script>
+    <script src="/static/js/studio-search.js"></script>
+    <script src="/static/js/studio-report.js"></script>
+    <script src="/static/js/studio-agent.js"></script>
+    <script src="/static/js/studio-misc.js"></script>
+    <script src="/static/js/studio.js"></script>
+</body>
+</html>

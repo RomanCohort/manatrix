@@ -469,7 +469,7 @@ class Trainer:
 
     def load_checkpoint(self, path: str):
         """Load training checkpoint"""
-        checkpoint = torch.load(path, map_location=self.device)
+        checkpoint = torch.load(path, map_location=self.device, weights_only=True)
 
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.mlp_encoder.load_state_dict(checkpoint['mlp_state_dict'])

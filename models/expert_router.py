@@ -104,6 +104,111 @@ ROUTING_KEYWORDS: Dict[ExpertType, List[str]] = {
         "传递攻击", "pass-the-hash", "pth", "代理", "proxy",
         "隧道", "tunnel",
     ],
+    # New experts keywords
+    ExpertType.WEB_APPLICATION: [
+        "web", "网站", "web应用", "sql注入", "xss", "csrf", "ssrf",
+        "burpsuite", "sqlmap", "目录", "directory", "上传", "upload",
+        "cookie", "session", "jwt", "owasp", "浏览器", "http", "https",
+    ],
+    ExpertType.API_SECURITY: [
+        "api", "rest", "graphql", "soap", "grpc", "接口", "endpoint",
+        "swagger", "openapi", "jwt", "token", "认证", "authorization",
+        "rate limit", "限流", "bearer", "oauth",
+    ],
+    ExpertType.ACTIVE_DIRECTORY: [
+        "ad", "active directory", "域", "domain", "kerberos", "ldap",
+        "bloodhound", "powerview", "rubeus", "gpo", "组策略",
+        "域控", "域控制器", "dc", "ntds", "sysvol",
+    ],
+    ExpertType.CLOUD_SECURITY: [
+        "云", "cloud", "aws", "azure", "gcp", "s3", "ec2", "lambda",
+        "iam", "k8s", "kubernetes", "docker", "容器", "container",
+        "bucket", "存储桶", "云服务", "serverless", "eks", "aks", "gke",
+    ],
+    ExpertType.IOT_SECURITY: [
+        "iot", "嵌入式", "embedded", "固件", "firmware", "摄像头", "camera",
+        "路由器", "router", "智能家居", "smart home", "plc", "scada",
+        "工业控制", "ics", "串口", "serial", "jtag", "uart",
+    ],
+    ExpertType.MOBILE_SECURITY: [
+        "移动", "mobile", "android", "ios", "apk", "ipa", "app", "应用",
+        "frida", "objection", "jadx", "drozer", "root", "越狱", "jailbreak",
+        "ssl pinning", "逆向", "reverse",
+    ],
+    ExpertType.CRYPTO_ATTACK: [
+        "加密", "crypto", "加密", "hashcat", "john", "破解", "crack",
+        "rsa", "aes", "des", "ssl", "tls", "证书", "certificate",
+        "密钥", "key", "padding oracle", "jwt",
+    ],
+    ExpertType.NETWORK_TUNNEL: [
+        "隧道", "tunnel", "代理", "proxy", "socks", "ssh", "port forward",
+        "chisel", "ligolo", "pivot", "跳板", "frp", "ngrok",
+        "icmp", "dns tunnel", "隐蔽通道", "covert",
+    ],
+    ExpertType.DATA_EXFILTRATION: [
+        "数据窃取", "exfiltration", "外传", "传输", "dns exfil",
+        "隐写", "steganography", "分块", "chunk", "加密传输",
+        "rclone", "dropbox", "mega",
+    ],
+    ExpertType.SOCIAL_ENGINEERING: [
+        "钓鱼", "phishing", "社工", "social engineering", "欺骗",
+        "pretexting", "尾随", "tailgating", "usb投放", "vishing",
+        "短信钓鱼", "smishing", "gophish", "set", "凭证收割",
+    ],
+    ExpertType.SUPPLY_CHAIN: [
+        "供应链", "supply chain", "依赖", "dependency", "npm", "pip",
+        "maven", "nuget", "恶意包", "malicious package", "typosquat",
+        "依赖混淆", "snyk", "trivy", "sbom",
+    ],
+    ExpertType.WIRELESS_SECURITY: [
+        "无线", "wireless", "wifi", "wpa", "wep", "wps", "蓝牙", "bluetooth",
+        "aircrack", "握手包", "handshake", "deauth", "evil twin",
+        "rfid", "nfc", "zigbee", "lora",
+    ],
+    ExpertType.REVERSE_ENGINEERING: [
+        "逆向", "reverse", "反编译", "decompile", "反汇编", "disassemble",
+        "二进制", "binary", "elf", "固件", "firmware", "apk", "dex",
+        "android", "ios", ".net", "dll", "exe", "jar",
+        "ghidra", "ida", "radare", "jadx", "dnspy",
+        "漏洞挖掘", "fuzzing", "exploit", "rop", "shellcode",
+        "smali", "ilspy", "x64dbg", "gdb", "调试", "debug",
+        "混淆", "obfuscate", "patch", "diff",
+        "符号执行", "symbolic", "angr", "klee",
+    ],
+    ExpertType.HARDWARE_SECURITY: [
+        # Hardware types
+        "硬件", "hardware", "芯片", "chip", "mcu", "cpu", "soc", "fpga",
+        "eeprom", "flash", "secure boot", "efuse", "tpm", "hsm",
+        # Debug interfaces
+        "jtag", "uart", "serial", "console", "spi", "i2c", "swd",
+        "调试口", "debug port", "引脚", "pin",
+        # Physical attacks
+        "侧信道", "side channel", "power analysis", "em攻击", "fault injection",
+        "故障注入", "glitch", "电压", "时钟", "cold boot", "冷启动",
+        "功耗分析", "电磁分析", "timing attack", "时序攻击",
+        # Chip-off / Deprocessing
+        "chip-off", "去封装", "decap", "decapsulation", "探针", "probing",
+        "delayer", "delayering", "die imaging", "成像",
+        # PCB
+        "pcb", "电路板", "board", "走线", "trace", "网表", "netlist",
+        "原理图", "schematic", "逆向", "reverse",
+        # RFID/NFC
+        "rfid", "nfc", "mifare", "proxmark", "标签", "card", "克隆",
+        "智能卡", "smartcard", "emv", "门禁",
+        # Automotive
+        "汽车", "automotive", "can", "obd", "vehicle", "canbus",
+        "car", "车载", "工控", "plc", "scada", "modbus",
+        # Physical security
+        "锁具", "lock", "开锁", "lockpick", "物理", "physical",
+        "入侵", "bypass", "door", "access",
+        # Wireless hardware
+        "zigbee", "sub-ghz", "rf", "无线", "sdr", "hackrf", "usrp",
+        "ubertooth", "bladeRF", "rtlsdr",
+        # Tools
+        "chipwhisperer", "proxmark", "jtagulator", "flashrom", "saleae",
+        "openocd", "jlink", "killerbee", "cansniffer", "gnuradio",
+        "minicom", "logic analyzer", "示波器",
+    ],
 }
 
 # Phase-to-expert mapping
@@ -528,6 +633,20 @@ class ExpertRouter:
             ExpertType.POST_EXPLOITATION: "后渗透",
             ExpertType.CREDENTIAL: "凭据攻击",
             ExpertType.LATERAL_MOVEMENT: "横向移动",
+            ExpertType.WEB_APPLICATION: "Web应用",
+            ExpertType.API_SECURITY: "API安全",
+            ExpertType.ACTIVE_DIRECTORY: "Active Directory",
+            ExpertType.CLOUD_SECURITY: "云安全",
+            ExpertType.IOT_SECURITY: "IoT安全",
+            ExpertType.MOBILE_SECURITY: "移动安全",
+            ExpertType.CRYPTO_ATTACK: "密码学攻击",
+            ExpertType.NETWORK_TUNNEL: "网络隧道",
+            ExpertType.DATA_EXFILTRATION: "数据窃取",
+            ExpertType.SOCIAL_ENGINEERING: "社会工程",
+            ExpertType.SUPPLY_CHAIN: "供应链安全",
+            ExpertType.WIRELESS_SECURITY: "无线安全",
+            ExpertType.REVERSE_ENGINEERING: "逆向工程",
+            ExpertType.HARDWARE_SECURITY: "硬件安全",
         }
 
         primary_label = type_labels.get(primary, primary.value)
@@ -549,16 +668,46 @@ def create_default_router(llm_provider=None, rag_retriever=None) -> ExpertRouter
         PostExploitationExpert,
         CredentialExpert,
         LateralMovementExpert,
+        WebApplicationExpert,
+        APISecurityExpert,
+        ActiveDirectoryExpert,
+        CloudSecurityExpert,
+        IoTIoTSecurityExpert,
+        MobileSecurityExpert,
+        CryptoAttackExpert,
+        NetworkTunnelExpert,
+        DataExfiltrationExpert,
+        SocialEngineeringExpert,
+        SupplyChainExpert,
+        WirelessSecurityExpert,
+        ReverseEngineeringExpert,
+        HardwareSecurityExpert,
     )
 
     router = ExpertRouter(llm_provider=llm_provider, rag_retriever=rag_retriever)
 
     # Register all experts
+    # Core experts
     router.register_expert(ReconnaissanceExpert(llm_provider, rag_retriever))
     router.register_expert(VulnerabilityExpert(llm_provider, rag_retriever))
     router.register_expert(ExploitationExpert(llm_provider, rag_retriever))
     router.register_expert(PostExploitationExpert(llm_provider, rag_retriever))
     router.register_expert(CredentialExpert(llm_provider, rag_retriever))
     router.register_expert(LateralMovementExpert(llm_provider, rag_retriever))
+    # Expanded experts for more hacking scenarios
+    router.register_expert(WebApplicationExpert(llm_provider, rag_retriever))
+    router.register_expert(APISecurityExpert(llm_provider, rag_retriever))
+    router.register_expert(ActiveDirectoryExpert(llm_provider, rag_retriever))
+    router.register_expert(CloudSecurityExpert(llm_provider, rag_retriever))
+    router.register_expert(IoTIoTSecurityExpert(llm_provider, rag_retriever))
+    router.register_expert(MobileSecurityExpert(llm_provider, rag_retriever))
+    router.register_expert(CryptoAttackExpert(llm_provider, rag_retriever))
+    router.register_expert(NetworkTunnelExpert(llm_provider, rag_retriever))
+    router.register_expert(DataExfiltrationExpert(llm_provider, rag_retriever))
+    router.register_expert(SocialEngineeringExpert(llm_provider, rag_retriever))
+    router.register_expert(SupplyChainExpert(llm_provider, rag_retriever))
+    router.register_expert(WirelessSecurityExpert(llm_provider, rag_retriever))
+    router.register_expert(ReverseEngineeringExpert(llm_provider, rag_retriever))
+    router.register_expert(HardwareSecurityExpert(llm_provider, rag_retriever))
 
     return router

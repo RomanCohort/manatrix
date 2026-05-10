@@ -1,4 +1,4 @@
-# Password Guesser - Dockerfile
+# Manatrix - Dockerfile
 # Multi-stage build for smaller image
 
 # ---- Stage 1: Build ----

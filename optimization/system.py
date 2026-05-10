@@ -352,7 +352,7 @@ class CheckpointManager:
         device: str = 'cpu'
     ) -> Dict[str, Any]:
         """Load a specific checkpoint file"""
-        checkpoint = torch.load(path, map_location=device)
+        checkpoint = torch.load(path, map_location=device, weights_only=True)
         model.load_state_dict(checkpoint['model_state_dict'])
 
         if optimizer and 'optimizer_state_dict' in checkpoint:
@@ -369,7 +369,7 @@ class CheckpointManager:
         device: str
     ) -> CheckpointInfo:
         """Internal method to load a checkpoint"""
-        checkpoint = torch.load(info.path, map_location=device)
+        checkpoint = torch.load(info.path, map_location=device, weights_only=True)
         model.load_state_dict(checkpoint['model_state_dict'])
 
         if optimizer and 'optimizer_state_dict' in checkpoint:

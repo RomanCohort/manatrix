@@ -59,9 +59,9 @@ def setup_logging(
         log_dir: Directory for log files.
 
     Returns:
-        The configured root logger for the ``'password_guesser'`` namespace.
+        The configured root logger for the ``'manatrix'`` namespace.
     """
-    root_logger = logging.getLogger('password_guesser')
+    root_logger = logging.getLogger('manatrix')
     root_logger.setLevel(getattr(logging, level.upper(), logging.INFO))
 
     # Avoid duplicate handlers on repeated calls
@@ -93,10 +93,10 @@ def setup_logging(
     return root_logger
 
 
-def get_logger(name: str = 'password_guesser') -> logging.Logger:
-    """Return a logger under the ``password_guesser`` namespace.
+def get_logger(name: str = 'manatrix') -> logging.Logger:
+    """Return a logger under the ``manatrix`` namespace.
 
-    If *name* does not already start with ``'password_guesser'`` it is
+    If *name* does not already start with ``'manatrix'`` it is
     prepended automatically.
 
     Args:
@@ -105,6 +105,6 @@ def get_logger(name: str = 'password_guesser') -> logging.Logger:
     Returns:
         A :class:`logging.Logger` instance.
     """
-    if not name.startswith('password_guesser'):
-        name = f'password_guesser.{name}'
+    if not name.startswith('manatrix'):
+        name = f'manatrix.{name}'
     return logging.getLogger(name)

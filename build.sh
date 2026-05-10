@@ -1,9 +1,9 @@
 #!/bin/bash
-# Build script for Password Guesser
+# Build script for Manatrix
 
 set -e
 
-echo "=== Password Guesser Build Script ==="
+echo "=== Manatrix Build Script ==="
 echo ""
 
 # Colors
@@ -44,8 +44,8 @@ build_pip() {
 # Build Docker image
 build_docker() {
     print_info "Building Docker image..."
-    docker build -t password-guesser:latest .
-    print_info "Docker image built: password-guesser:latest"
+    docker build -t manatrix:latest .
+    print_info "Docker image built: manatrix:latest"
 }
 
 # Build executable with PyInstaller
@@ -54,16 +54,16 @@ build_exe() {
     pip install pyinstaller
 
     pyinstaller --onefile \
-        --name password-guesser \
+        --name manatrix \
         --add-data "config.yaml:." \
         --add-data "web/templates:web/templates" \
         --add-data "web/static:web/static" \
         --hidden-import torch \
         --hidden-import yaml \
         --collect-all torch \
-        password_guesser/cli.py
+        manatrix/cli.py
 
-    print_info "Executable built in dist/password-guesser"
+    print_info "Executable built in dist/manatrix"
 }
 
 # Run tests
@@ -109,7 +109,7 @@ case "${1:-all}" in
         clean
         build_pip
         print_info "Build complete!"
-        print_info "Install with: pip install dist/password_guesser-1.0.0-py3-none-any.whl"
+        print_info "Install with: pip install dist/manatrix-1.0.0-py3-none-any.whl"
         ;;
     *)
         echo "Usage: $0 {pip|docker|exe|test|clean|all}"

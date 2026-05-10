@@ -1,5 +1,5 @@
 """
-Test suite for Password Guesser & Penetration Testing Framework.
+Test suite for Manatrix & Penetration Testing Framework.
 
 Run with: pytest tests/ -v --cov=. --cov-report=html
 """

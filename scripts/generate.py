@@ -251,7 +251,7 @@ def main():
     mlp_encoder = create_mlp_encoder(config)
 
     # Load checkpoint
-    checkpoint = torch.load(args.checkpoint, map_location=device)
+    checkpoint = torch.load(args.checkpoint, map_location=device, weights_only=True)
     model.load_state_dict(checkpoint['model_state_dict'])
     mlp_encoder.load_state_dict(checkpoint['mlp_state_dict'])
 

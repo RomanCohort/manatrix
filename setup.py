@@ -1,16 +1,16 @@
 """
-Setup script for password-guesser
+Setup script for manatrix - Roman Legion + Matrix
 """
 
 from setuptools import setup, find_packages
 
 setup(
-    name="password-guesser",
-    version="1.0.0",
-    description="AI-powered targeted password guessing system",
-    author="Your Name",
-    author_email="your@email.com",
-    url="https://github.com/your-repo/password_guesser",
+    name="manatrix",
+    version="1.1.0",
+    description="AI-powered password guessing + pentest framework (Roman Legion + Matrix)",
+    author="RomanCohort",
+    author_email="roman@cohort.dev",
+    url="https://github.com/RomanCohort/manatrix",
     license="MIT",
     packages=find_packages(),
     include_package_data=True,
@@ -35,8 +35,8 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "password-guesser=password_guesser.cli:main",
-            "pg-shell=kali_terminal:main",
+            "manatrix=manatrix.cli:main",
+            "manatrix-shell=kali_terminal:main",
         ],
     },
     classifiers=[
@@ -52,5 +52,5 @@ setup(
         "Topic :: Security",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
-    keywords="password security machine-learning mamba differential-evolution",
+    keywords="password security machine-learning mamba differential-evolution pentest manatrix",
 )

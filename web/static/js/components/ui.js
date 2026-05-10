@@ -1,7 +1,7 @@
 /**
  * UI Components Library
  *
- * Reusable UI components for the Password Guesser frontend.
+ * Reusable UI components for the Manatrix frontend.
  * No external dependencies - pure vanilla JavaScript.
  */
 

@@ -7,7 +7,7 @@ Trains the reflective RL agent on simulated penetration testing environments.
 
 import sys
 import os
-sys.path.insert(0, "D:/password_guesser")
+sys.path.insert(0, "D:/manatrix")
 
 import logging
 import time

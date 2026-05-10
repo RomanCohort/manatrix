@@ -160,6 +160,34 @@ class ReflectiveRLAgent:
         self.experience_store = experience_store
         self.step_count = 0
 
+        # Target value network for stable advantage estimation
+        # This prevents moving target issue in PPO updates
+        import torch
+        self.target_value_net = PenTestPolicyNetwork(
+            state_dim=state_dim,
+            action_dim=action_dim,
+        ).to(self.device)
+        self.target_value_net.load_state_dict(self.policy.state_dict())
+        self.target_value_net.eval()
+        self.tau = 0.005  # Soft update coefficient
+        self.update_target_every = 100  # Hard update frequency
+
+    def _update_target_network(self) -> None:
+        """Update target value network using soft update."""
+        import torch.nn.utils as utils
+        if self.step_count % self.update_target_every == 0:
+            # Hard update
+            self.target_value_net.load_state_dict(self.policy.state_dict())
+        else:
+            # Soft update
+            for target_param, param in zip(
+                self.target_value_net.parameters(),
+                self.policy.parameters()
+            ):
+                target_param.data.copy_(
+                    self.tau * param.data + (1.0 - self.tau) * target_param.data
+                )
+
     def select_action(
         self,
         state: PenTestState,
@@ -416,11 +444,17 @@ Respond in JSON format:
             np.stack([e.action_mask for e in batch])
         ).to(self.device)
 
-        # Compute returns (simple MC)
-        returns = rewards + self.gamma * (
-            self.policy(next_states)[1].detach() * (1 - dones)
-        )
-        advantages = returns - self.policy(states)[1].detach()
+        # Compute returns (simple MC with target network for stability)
+        with torch.no_grad():
+            target_values = self.target_value_net(next_states)[1]
+        returns = rewards + self.gamma * (target_values * (1 - dones))
+
+        # Advantage estimation using frozen target network (prevents moving target problem)
+        with torch.no_grad():
+            baseline = self.target_value_net(states)[1]
+        advantages = returns - baseline
+
+        # Normalize advantages
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
         # PPO update
@@ -456,6 +490,9 @@ Respond in JSON format:
         torch.nn.utils.clip_grad_norm_(self.policy.parameters(), 0.5)
         self.optimizer.step()
 
+        # Update target network for stable value estimation
+        self._update_target_network()
+
         return loss.item()
 
     def save_reflection_log(self, path: str) -> None:
@@ -469,6 +506,7 @@ Respond in JSON format:
         import torch
         torch.save({
             "policy_state_dict": self.policy.state_dict(),
+            "target_value_state_dict": self.target_value_net.state_dict(),
             "optimizer_state_dict": self.optimizer.state_dict(),
             "step_count": self.step_count,
             "reflections_count": len(self.reflections),
@@ -477,7 +515,8 @@ Respond in JSON format:
     def load(self, path: str) -> None:
         """Load agent state."""
         import torch
-        checkpoint = torch.load(path, map_location=self.device)
+        checkpoint = torch.load(path, map_location=self.device, weights_only=True)
         self.policy.load_state_dict(checkpoint["policy_state_dict"])
+        self.target_value_net.load_state_dict(checkpoint.get("target_value_state_dict", checkpoint["policy_state_dict"]))
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         self.step_count = checkpoint.get("step_count", 0)

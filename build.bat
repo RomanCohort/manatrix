@@ -1,7 +1,7 @@
 @echo off
-REM Build script for Password Guesser (Windows)
+REM Build script for Manatrix (Windows)
 
-echo === Password Guesser Build Script ===
+echo === Manatrix Build Script ===
 echo.
 
 setlocal EnableDelayedExpansion
@@ -25,15 +25,15 @@ goto end
 
 :docker
 echo [INFO] Building Docker image...
-docker build -t password-guesser:latest .
-echo [INFO] Docker image built: password-guesser:latest
+docker build -t manatrix:latest .
+echo [INFO] Docker image built: manatrix:latest
 goto end
 
 :exe
 echo [INFO] Building executable with PyInstaller...
 pip install pyinstaller
-pyinstaller --onefile --name password-guesser --add-data "config.yaml;." --add-data "web/templates;web/templates" --add-data "web/static;web/static" --hidden-import torch --hidden-import yaml password_guesser/cli.py
-echo [INFO] Executable built in dist\password-guesser.exe
+pyinstaller --onefile --name manatrix --add-data "config.yaml;." --add-data "web/templates;web/templates" --add-data "web/static;web/static" --hidden-import torch --hidden-import yaml manatrix/cli.py
+echo [INFO] Executable built in dist\manatrix.exe
 goto end
 
 :test
@@ -58,7 +58,7 @@ python --version
 call :clean
 call :pip
 echo [INFO] Build complete!
-echo [INFO] Install with: pip install dist\password_guesser-1.0.0-py3-none-any.whl
+echo [INFO] Install with: pip install dist\manatrix-1.0.0-py3-none-any.whl
 goto end
 
 :usage

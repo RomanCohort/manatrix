@@ -12,7 +12,7 @@ Tests the web crawler functionality:
 
 import sys
 import os
-sys.path.insert(0, "D:/password_guesser")
+sys.path.insert(0, "D:/manatrix")
 
 import json
 from urllib.parse import urlparse

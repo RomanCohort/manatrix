@@ -6,7 +6,7 @@
             "label": "Run Interactive Shell",
             "type": "shell",
             "command": "${command:python.interpreterPath}",
-            "args": ["-m", "password_guesser.cli", "interactive"],
+            "args": ["-m", "manatrix.cli", "interactive"],
             "problemMatcher": [],
             "presentation": {
                 "echo": true,
@@ -23,7 +23,7 @@
             "label": "Run Training",
             "type": "shell",
             "command": "${command:python.interpreterPath}",
-            "args": ["-m", "password_guesser.cli", "train", "--data", "${input:dataFile}", "--epochs", "100"],
+            "args": ["-m", "manatrix.cli", "train", "--data", "${input:dataFile}", "--epochs", "100"],
             "problemMatcher": [],
             "group": "build"
         },
@@ -31,7 +31,7 @@
             "label": "Generate Passwords",
             "type": "shell",
             "command": "${command:python.interpreterPath}",
-            "args": ["-m", "password_guesser.cli", "generate", "--checkpoint", "${input:checkpoint}", "--target", "${input:target}"],
+            "args": ["-m", "manatrix.cli", "generate", "--checkpoint", "${input:checkpoint}", "--target", "${input:target}"],
             "problemMatcher": []
         },
         {
@@ -56,7 +56,7 @@
             "label": "Run Web Server",
             "type": "shell",
             "command": "${command:python.interpreterPath}",
-            "args": ["-m", "password_guesser.cli", "web", "--port", "8000"],
+            "args": ["-m", "manatrix.cli", "web", "--port", "8000"],
             "problemMatcher": [],
             "presentation": {
                 "reveal": "always",
@@ -67,28 +67,28 @@
             "label": "Scan Target",
             "type": "shell",
             "command": "${command:python.interpreterPath}",
-            "args": ["-m", "password_guesser.cli", "scan", "--target", "${input:targetIP}"],
+            "args": ["-m", "manatrix.cli", "scan", "--target", "${input:targetIP}"],
             "problemMatcher": []
         },
         {
             "label": "Generate Chart",
             "type": "shell",
             "command": "${command:python.interpreterPath}",
-            "args": ["-m", "password_guesser.cli", "chart", "-o", "chart.png", "--title", "${input:chartTitle}"],
+            "args": ["-m", "manatrix.cli", "chart", "-o", "chart.png", "--title", "${input:chartTitle}"],
             "problemMatcher": []
         },
         {
             "label": "Show Help",
             "type": "shell",
             "command": "${command:python.interpreterPath}",
-            "args": ["-m", "password_guesser.cli", "help"],
+            "args": ["-m", "manatrix.cli", "help"],
             "problemMatcher": []
         },
         {
             "label": "Check System Status",
             "type": "shell",
             "command": "${command:python.interpreterPath}",
-            "args": ["-m", "password_guesser.cli", "status"],
+            "args": ["-m", "manatrix.cli", "status"],
             "problemMatcher": []
         }
     ],

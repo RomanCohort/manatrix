@@ -66,7 +66,7 @@ BANNER = f"""
  /_/   \\_\\|_|\\__,_|\\___|_| |_| |_|\\___|\\__|\\__/_/   \\_\\ \\__\\___|\\__, |____/
 {C.ENDC}
 {C.CYAN}     ┌─────────────────────────────────────────────────────┐
-     │  Password Guesser Framework v2.0 - LLM Enhanced       │
+     │  Manatrix v2.0 - LLM Enhanced       │
      │  Direct LLM Control & Real-time Execution              │
      └─────────────────────────────────────────────────────┘
 {C.ENDC}
@@ -644,8 +644,7 @@ class LLMController:
             if json_match:
                 return json.loads(json_match.group())
             return {"raw_response": response}
-        except:
-            return {"raw_response": response}
+        except Exception as e:
 
     def analyze_target(self, target: str) -> str:
         """Analyze target for vulnerabilities."""

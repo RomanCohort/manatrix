@@ -1,5 +1,5 @@
 /**
- * Password Guesser - Professional Frontend Application
+ * Manatrix - Professional Frontend Application
  *
  * Modern UI with professional design system, keyboard shortcuts,
  * localStorage persistence, and real-time updates.

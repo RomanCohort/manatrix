@@ -3,15 +3,15 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "password-guesser"
+name = "manatrix"
 version = "1.1.0"
-description = "AI-powered targeted password guessing system using MAMBA + Differential Evolution + LLM"
+description = "AI-powered targeted password guessing + pentest framework using MAMBA + Differential Evolution + LLM"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
     {name = "RomanCohort"}
 ]
-keywords = ["password", "security", "machine-learning", "mamba", "differential-evolution", "pcfg", "hashcat"]
+keywords = ["password", "security", "machine-learning", "mamba", "differential-evolution", "pcfg", "hashcat", "pentest", "manatrix"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -69,16 +69,16 @@ redis = [
 ]
 
 [project.scripts]
-password-guesser = "password_guesser.cli:main"
+manatrix = "manatrix.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/RomanCohort/password_guesser"
-Documentation = "https://github.com/RomanCohort/password_guesser#readme"
-Repository = "https://github.com/RomanCohort/password_guesser.git"
+Homepage = "https://github.com/RomanCohort/manatrix"
+Documentation = "https://github.com/RomanCohort/manatrix#readme"
+Repository = "https://github.com/RomanCohort/manatrix.git"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["models*", "optimization*", "utils*", "web*", "rules*", "pcfg*", "evaluation*", "data*", "training*", "config*", "attack_graph*", "knowledge_graph*", "rl_agent*", "pentest*"]
+include = ["models*", "optimization*", "utils*", "web*", "rules*", "pcfg*", "evaluation*", "data*", "training*", "config*", "attack_graph*", "knowledge_graph*", "rl_agent*", "pentest*", "manatrix*"]
 
 [tool.setuptools.package-data]
 "*" = ["*.yaml", "*.json", "*.html", "*.css", "*.js"]
@@ -111,7 +111,7 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["models", "optimization", "attack_graph", "knowledge_graph", "rl_agent", "pentest", "rules", "pcfg", "evaluation", "data", "utils", "web"]
+source = ["models", "optimization", "attack_graph", "knowledge_graph", "rl_agent", "pentest", "rules", "pcfg", "evaluation", "data", "utils", "web", "manatrix"]
 omit = ["tests/*", "build/*"]
 
 [tool.coverage.report]

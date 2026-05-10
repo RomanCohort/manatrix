@@ -100,7 +100,7 @@ jobs:
         context: .
         push: ${{ github.event_name != 'pull_request' }}
         tags: |
-          ${{ secrets.DOCKERHUB_USERNAME }}/password-guesser:latest
-          ${{ secrets.DOCKERHUB_USERNAME }}/password-guesser:${{ github.sha }}
+          ${{ secrets.DOCKERHUB_USERNAME }}/manatrix:latest
+          ${{ secrets.DOCKERHUB_USERNAME }}/manatrix:${{ github.sha }}
         cache-from: type=gha
         cache-to: type=gha,mode=max

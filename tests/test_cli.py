@@ -1,5 +1,5 @@
 """
-CLI Tests for Password Guesser Framework.
+CLI Tests for Manatrix Framework.
 
 Run with: pytest tests/test_cli.py -v
 """
@@ -21,13 +21,13 @@ class TestCLIHelp:
     def test_main_help(self):
         """Test main help output."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "--help"],
+            [sys.executable, "manatrix/cli.py", "--help"],
             capture_output=True,
             text=True,
             cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         )
         assert result.returncode == 0
-        assert "password-guesser" in result.stdout
+        assert "manatrix" in result.stdout
         assert "train" in result.stdout
         assert "generate" in result.stdout
         assert "scan" in result.stdout
@@ -35,7 +35,7 @@ class TestCLIHelp:
     def test_version_command(self):
         """Test version command."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "version"],
+            [sys.executable, "manatrix/cli.py", "version"],
             capture_output=True,
             text=True,
             cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -58,7 +58,7 @@ class TestCLIHelp:
 
         for cmd in subcommands:
             result = subprocess.run(
-                [sys.executable, "password_guesser/cli.py", cmd, "--help"],
+                [sys.executable, "manatrix/cli.py", cmd, "--help"],
                 capture_output=True,
                 text=True,
                 cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -73,7 +73,7 @@ class TestEvaluateCommand:
     def test_evaluate_weak_password(self):
         """Test evaluating a weak password."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "evaluate", "-p", "password"],
+            [sys.executable, "manatrix/cli.py", "evaluate", "-p", "password"],
             capture_output=True,
             text=True,
             cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -85,7 +85,7 @@ class TestEvaluateCommand:
     def test_evaluate_strong_password(self):
         """Test evaluating a strong password."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "evaluate", "-p", "Xk9#mP2$vLqR7Wz!"],
+            [sys.executable, "manatrix/cli.py", "evaluate", "-p", "Xk9#mP2$vLqR7Wz!"],
             capture_output=True,
             text=True,
             cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -96,7 +96,7 @@ class TestEvaluateCommand:
     def test_evaluate_detailed(self):
         """Test detailed password evaluation."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "evaluate", "-p", "Test123!", "-d"],
+            [sys.executable, "manatrix/cli.py", "evaluate", "-p", "Test123!", "-d"],
             capture_output=True,
             text=True,
             cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -111,7 +111,7 @@ class TestHashCommand:
     def test_hash_text(self):
         """Test hashing text."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "hash", "-t", "hello"],
+            [sys.executable, "manatrix/cli.py", "hash", "-t", "hello"],
             capture_output=True,
             text=True,
             cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -125,7 +125,7 @@ class TestHashCommand:
     def test_hash_empty_text(self):
         """Test hashing with no arguments shows usage."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "hash"],
+            [sys.executable, "manatrix/cli.py", "hash"],
             capture_output=True,
             text=True,
             cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -136,7 +136,7 @@ class TestHashCommand:
     def test_hash_specific_algorithm(self):
         """Test hashing with specific algorithm."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "hash", "-t", "hello", "-a", "sha256"],
+            [sys.executable, "manatrix/cli.py", "hash", "-t", "hello", "-a", "sha256"],
             capture_output=True,
             text=True,
             cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -148,7 +148,7 @@ class TestHashCommand:
     def test_hash_compare_match(self):
         """Test hash comparison with matching hash."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "hash",
+            [sys.executable, "manatrix/cli.py", "hash",
              "-t", "hello", "-c", "5d41402abc4b2a76b9719d911017c592"],
             capture_output=True,
             text=True,
@@ -165,7 +165,7 @@ class TestHashCommand:
 
         try:
             result = subprocess.run(
-                [sys.executable, "password_guesser/cli.py", "hash", "-f", temp_path],
+                [sys.executable, "manatrix/cli.py", "hash", "-f", temp_path],
                 capture_output=True,
                 text=True,
                 cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -182,7 +182,7 @@ class TestEncodeCommand:
     def test_encode_base64(self):
         """Test base64 encoding."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "encode", "-t", "hello", "-m", "base64"],
+            [sys.executable, "manatrix/cli.py", "encode", "-t", "hello", "-m", "base64"],
             capture_output=True,
             text=True,
             cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -194,7 +194,7 @@ class TestEncodeCommand:
     def test_decode_base64(self):
         """Test base64 decoding."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "encode", "-t", "aGVsbG8=", "-m", "base64", "-d"],
+            [sys.executable, "manatrix/cli.py", "encode", "-t", "aGVsbG8=", "-m", "base64", "-d"],
             capture_output=True,
             text=True,
             cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -205,7 +205,7 @@ class TestEncodeCommand:
     def test_encode_all(self):
         """Test encoding with all methods."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "encode", "-t", "test", "-m", "all"],
+            [sys.executable, "manatrix/cli.py", "encode", "-t", "test", "-m", "all"],
             capture_output=True,
             text=True,
             cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -225,7 +225,7 @@ class TestWordlistCommand:
 
         try:
             result = subprocess.run(
-                [sys.executable, "password_guesser/cli.py", "wordlist",
+                [sys.executable, "manatrix/cli.py", "wordlist",
                  "-o", output_path, "--pattern", "@@@2024", "--count", "10"],
                 capture_output=True,
                 text=True,
@@ -248,7 +248,7 @@ class TestWordlistCommand:
 
         try:
             result = subprocess.run(
-                [sys.executable, "password_guesser/cli.py", "wordlist",
+                [sys.executable, "manatrix/cli.py", "wordlist",
                  "-o", output_path, "--method", "rules", "--count", "20"],
                 capture_output=True,
                 text=True,
@@ -267,7 +267,7 @@ class TestReverseShellCommand:
     def test_reverse_shell_bash(self):
         """Test bash reverse shell generation."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "reverse-shell",
+            [sys.executable, "manatrix/cli.py", "reverse-shell",
              "--lhost", "127.0.0.1", "--lport", "4444", "-t", "bash"],
             capture_output=True,
             text=True,
@@ -281,7 +281,7 @@ class TestReverseShellCommand:
     def test_reverse_shell_all(self):
         """Test all reverse shell types."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "reverse-shell",
+            [sys.executable, "manatrix/cli.py", "reverse-shell",
              "--lhost", "10.0.0.1", "--lport", "9999", "-t", "all"],
             capture_output=True,
             text=True,
@@ -299,7 +299,7 @@ class TestNetworkCommand:
     def test_network_resolve(self):
         """Test DNS resolution."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "network",
+            [sys.executable, "manatrix/cli.py", "network",
              "--action", "resolve", "--target", "localhost"],
             capture_output=True,
             text=True,
@@ -311,7 +311,7 @@ class TestNetworkCommand:
     def test_network_ifconfig(self):
         """Test ifconfig action."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "network", "--action", "ifconfig"],
+            [sys.executable, "manatrix/cli.py", "network", "--action", "ifconfig"],
             capture_output=True,
             text=True,
             cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -326,7 +326,7 @@ class TestCryptCommand:
     def test_crypt_rot13(self):
         """Test ROT13 encryption."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "crypt",
+            [sys.executable, "manatrix/cli.py", "crypt",
              "--action", "encrypt", "--text", "hello", "--algorithm", "rot13"],
             capture_output=True,
             text=True,
@@ -339,7 +339,7 @@ class TestCryptCommand:
     def test_crypt_base64(self):
         """Test base64 encryption."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "crypt",
+            [sys.executable, "manatrix/cli.py", "crypt",
              "--action", "encrypt", "--text", "test", "--algorithm", "base64"],
             capture_output=True,
             text=True,
@@ -352,7 +352,7 @@ class TestCryptCommand:
     def test_crypt_caesar(self):
         """Test Caesar cipher."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "crypt",
+            [sys.executable, "manatrix/cli.py", "crypt",
              "--action", "encrypt", "--text", "abc", "--algorithm", "caesar", "--shift", "1"],
             capture_output=True,
             text=True,
@@ -365,7 +365,7 @@ class TestCryptCommand:
     def test_crypt_xor(self):
         """Test XOR encryption."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "crypt",
+            [sys.executable, "manatrix/cli.py", "crypt",
              "--action", "encrypt", "--text", "hello", "--algorithm", "xor", "--key", "key123"],
             capture_output=True,
             text=True,
@@ -377,7 +377,7 @@ class TestCryptCommand:
     def test_crypt_decrypt_rot13(self):
         """Test ROT13 decryption (same as encrypt)."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "crypt",
+            [sys.executable, "manatrix/cli.py", "crypt",
              "--action", "decrypt", "--text", "uryyb", "--algorithm", "rot13"],
             capture_output=True,
             text=True,
@@ -393,7 +393,7 @@ class TestHashcatCommand:
     def test_hashcat_detect_md5(self):
         """Test MD5 hash detection."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "hashcat",
+            [sys.executable, "manatrix/cli.py", "hashcat",
              "--action", "detect", "--hash", "e10adc3949ba59abbe56e057f20f883e"],
             capture_output=True,
             text=True,
@@ -405,7 +405,7 @@ class TestHashcatCommand:
     def test_hashcat_example(self):
         """Test hashcat examples."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "hashcat", "--action", "example"],
+            [sys.executable, "manatrix/cli.py", "hashcat", "--action", "example"],
             capture_output=True,
             text=True,
             cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -416,7 +416,7 @@ class TestHashcatCommand:
     def test_hashcat_benchmark(self):
         """Test hashcat benchmark."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "hashcat", "--action", "benchmark"],
+            [sys.executable, "manatrix/cli.py", "hashcat", "--action", "benchmark"],
             capture_output=True,
             text=True,
             cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -431,7 +431,7 @@ class TestAPICommand:
     def test_api_get_httpbin(self):
         """Test API GET request to httpbin."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "api",
+            [sys.executable, "manatrix/cli.py", "api",
              "--action", "get", "--url", "http://httpbin.org/get"],
             capture_output=True,
             text=True,
@@ -444,7 +444,7 @@ class TestAPICommand:
     def test_api_swagger_check(self):
         """Test API swagger detection."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "api",
+            [sys.executable, "manatrix/cli.py", "api",
              "--action", "swagger", "--url", "http://httpbin.org"],
             capture_output=True,
             text=True,
@@ -468,7 +468,7 @@ class TestStegoCommand:
 
         try:
             result = subprocess.run(
-                [sys.executable, "password_guesser/cli.py", "stego",
+                [sys.executable, "manatrix/cli.py", "stego",
                  "--action", "list_formats", "--input", temp_path],
                 capture_output=True,
                 text=True,
@@ -486,7 +486,7 @@ class TestFuzzCommand:
     def test_fuzz_web(self):
         """Test web fuzzing."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "fuzz",
+            [sys.executable, "manatrix/cli.py", "fuzz",
              "--action", "web", "--url", "http://example.com/FUZZ"],
             capture_output=True,
             text=True,
@@ -503,7 +503,7 @@ class TestWifiCommand:
     def test_wifi_scan(self):
         """Test wifi scan."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "wifi", "--action", "scan"],
+            [sys.executable, "manatrix/cli.py", "wifi", "--action", "scan"],
             capture_output=True,
             text=True,
             cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -514,7 +514,7 @@ class TestWifiCommand:
     def test_wifi_crack_info(self):
         """Test wifi crack info."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "wifi", "--action", "crack"],
+            [sys.executable, "manatrix/cli.py", "wifi", "--action", "crack"],
             capture_output=True,
             text=True,
             cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -529,7 +529,7 @@ class TestDBCommand:
     def test_db_injection(self):
         """Test database injection info."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "db",
+            [sys.executable, "manatrix/cli.py", "db",
              "--action", "injection", "--target", "localhost"],
             capture_output=True,
             text=True,
@@ -541,7 +541,7 @@ class TestDBCommand:
     def test_db_schema(self):
         """Test database schema info."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "db",
+            [sys.executable, "manatrix/cli.py", "db",
              "--action", "schema", "--target", "localhost", "--type", "mysql"],
             capture_output=True,
             text=True,
@@ -564,7 +564,7 @@ class TestLogCommand:
 
         try:
             result = subprocess.run(
-                [sys.executable, "password_guesser/cli.py", "log",
+                [sys.executable, "manatrix/cli.py", "log",
                  "--action", "analyze", "--file", temp_path],
                 capture_output=True,
                 text=True,
@@ -586,7 +586,7 @@ class TestLogCommand:
 
         try:
             result = subprocess.run(
-                [sys.executable, "password_guesser/cli.py", "log",
+                [sys.executable, "manatrix/cli.py", "log",
                  "--action", "search", "--file", temp_path, "--pattern", "ERROR"],
                 capture_output=True,
                 text=True,
@@ -607,7 +607,7 @@ class TestLogCommand:
 
         try:
             result = subprocess.run(
-                [sys.executable, "password_guesser/cli.py", "log",
+                [sys.executable, "manatrix/cli.py", "log",
                  "--action", "suspicious", "--file", temp_path],
                 capture_output=True,
                 text=True,
@@ -630,7 +630,7 @@ class TestConfigCommand:
 
         try:
             result = subprocess.run(
-                [sys.executable, "password_guesser/cli.py", "config",
+                [sys.executable, "manatrix/cli.py", "config",
                  "--action", "init"],
                 capture_output=True,
                 text=True,
@@ -650,7 +650,7 @@ class TestPayloadCommand:
     def test_payload_reverse_shell_bash(self):
         """Test reverse shell payload generation."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "payload",
+            [sys.executable, "manatrix/cli.py", "payload",
              "--type", "reverse_shell_bash", "--lhost", "127.0.0.1", "--lport", "4444"],
             capture_output=True,
             text=True,
@@ -663,7 +663,7 @@ class TestPayloadCommand:
     def test_payload_python_shell(self):
         """Test Python reverse shell payload."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "payload",
+            [sys.executable, "manatrix/cli.py", "payload",
              "--type", "reverse_shell_python", "--lhost", "10.0.0.1", "--lport", "9999"],
             capture_output=True,
             text=True,
@@ -680,7 +680,7 @@ class TestListenerCommand:
     def test_listener_list(self):
         """Test listener list."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "listener", "--action", "list"],
+            [sys.executable, "manatrix/cli.py", "listener", "--action", "list"],
             capture_output=True,
             text=True,
             cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -695,7 +695,7 @@ class TestKnowledgeCommand:
     def test_knowledge_stats(self):
         """Test knowledge stats."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "knowledge", "--action", "stats"],
+            [sys.executable, "manatrix/cli.py", "knowledge", "--action", "stats"],
             capture_output=True,
             text=True,
             cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -723,7 +723,7 @@ class TestReportCommand:
 
         try:
             result = subprocess.run(
-                [sys.executable, "password_guesser/cli.py", "report",
+                [sys.executable, "manatrix/cli.py", "report",
                  "--session", session_path, "--output", output_path, "--format", "markdown"],
                 capture_output=True,
                 text=True,
@@ -743,7 +743,7 @@ class TestCommandCount:
     def test_command_count(self):
         """Verify we have the expected number of commands."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "--help"],
+            [sys.executable, "manatrix/cli.py", "--help"],
             capture_output=True,
             text=True,
             cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -768,7 +768,7 @@ class TestCommandCount:
     def test_debug_info(self):
         """Test debug info command."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "debug", "--action", "info"],
+            [sys.executable, "manatrix/cli.py", "debug", "--action", "info"],
             capture_output=True, text=True,
             cwd="D:/password_guesser"
         )
@@ -778,7 +778,7 @@ class TestCommandCount:
     def test_debug_check(self):
         """Test debug check command."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "debug", "--action", "check"],
+            [sys.executable, "manatrix/cli.py", "debug", "--action", "check"],
             capture_output=True, text=True,
             cwd="D:/password_guesser"
         )
@@ -788,7 +788,7 @@ class TestCommandCount:
     def test_debug_deps(self):
         """Test debug deps command."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "debug", "--action", "deps"],
+            [sys.executable, "manatrix/cli.py", "debug", "--action", "deps"],
             capture_output=True, text=True,
             cwd="D:/password_guesser"
         )
@@ -797,7 +797,7 @@ class TestCommandCount:
     def test_debug_config(self):
         """Test debug config command."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "debug", "--action", "config"],
+            [sys.executable, "manatrix/cli.py", "debug", "--action", "config"],
             capture_output=True, text=True,
             cwd="D:/password_guesser"
         )
@@ -806,7 +806,7 @@ class TestCommandCount:
     def test_debug_memory(self):
         """Test debug memory command."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "debug", "--action", "memory"],
+            [sys.executable, "manatrix/cli.py", "debug", "--action", "memory"],
             capture_output=True, text=True,
             cwd="D:/password_guesser"
         )
@@ -815,7 +815,7 @@ class TestCommandCount:
     def test_profile_benchmark(self):
         """Test profile benchmark command."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "profile", "--action", "benchmark"],
+            [sys.executable, "manatrix/cli.py", "profile", "--action", "benchmark"],
             capture_output=True, text=True,
             cwd="D:/password_guesser"
         )
@@ -824,7 +824,7 @@ class TestCommandCount:
     def test_profile_compare(self):
         """Test profile compare command."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "profile", "--action", "compare"],
+            [sys.executable, "manatrix/cli.py", "profile", "--action", "compare"],
             capture_output=True, text=True,
             cwd="D:/password_guesser"
         )
@@ -833,7 +833,7 @@ class TestCommandCount:
     def test_env_show(self):
         """Test env show command."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "env", "--action", "show"],
+            [sys.executable, "manatrix/cli.py", "env", "--action", "show"],
             capture_output=True, text=True,
             cwd="D:/password_guesser"
         )
@@ -843,7 +843,7 @@ class TestCommandCount:
     def test_env_init(self):
         """Test env init command."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "env", "--action", "init"],
+            [sys.executable, "manatrix/cli.py", "env", "--action", "init"],
             capture_output=True, text=True,
             cwd="D:/password_guesser"
         )
@@ -853,7 +853,7 @@ class TestCommandCount:
     def test_pkg_list(self):
         """Test pkg list command."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "pkg", "--action", "list", "--type", "python"],
+            [sys.executable, "manatrix/cli.py", "pkg", "--action", "list", "--type", "python"],
             capture_output=True, text=True,
             cwd="D:/password_guesser"
         )
@@ -862,7 +862,7 @@ class TestCommandCount:
     def test_pkg_check(self):
         """Test pkg check command."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "pkg", "--action", "check"],
+            [sys.executable, "manatrix/cli.py", "pkg", "--action", "check"],
             capture_output=True, text=True,
             cwd="D:/password_guesser"
         )
@@ -871,7 +871,7 @@ class TestCommandCount:
     def test_script_help(self):
         """Test script help command."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "script", "--help"],
+            [sys.executable, "manatrix/cli.py", "script", "--help"],
             capture_output=True, text=True,
             cwd="D:/password_guesser"
         )
@@ -881,7 +881,7 @@ class TestCommandCount:
     def test_script_validate(self):
         """Test script validate with non-existent file."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "script", "nonexistent.pg", "--validate"],
+            [sys.executable, "manatrix/cli.py", "script", "nonexistent.pg", "--validate"],
             capture_output=True, text=True,
             cwd="D:/password_guesser"
         )
@@ -892,7 +892,7 @@ class TestCommandCount:
         """Test output format command."""
         for fmt in ["table", "json", "csv", "markdown"]:
             result = subprocess.run(
-                [sys.executable, "password_guesser/cli.py", "output", "--format", fmt],
+                [sys.executable, "manatrix/cli.py", "output", "--format", fmt],
                 capture_output=True, text=True,
                 cwd="D:/password_guesser"
             )
@@ -901,7 +901,7 @@ class TestCommandCount:
     def test_doc_list(self):
         """Test doc list command."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "doc", "--list"],
+            [sys.executable, "manatrix/cli.py", "doc", "--list"],
             capture_output=True, text=True,
             cwd="D:/password_guesser"
         )
@@ -911,7 +911,7 @@ class TestCommandCount:
     def test_doc_topic(self):
         """Test doc topic command."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "doc", "train"],
+            [sys.executable, "manatrix/cli.py", "doc", "train"],
             capture_output=True, text=True,
             cwd="D:/password_guesser"
         )
@@ -928,7 +928,7 @@ class TestCommandCount:
 
         try:
             result = subprocess.run(
-                [sys.executable, "password_guesser/cli.py", "data",
+                [sys.executable, "manatrix/cli.py", "data",
                  "--action", "validate", "--input", tmpfile],
                 capture_output=True, text=True,
                 cwd="D:/password_guesser"
@@ -948,7 +948,7 @@ class TestCommandCount:
 
         try:
             result = subprocess.run(
-                [sys.executable, "password_guesser/cli.py", "data",
+                [sys.executable, "manatrix/cli.py", "data",
                  "--action", "stats", "--input", tmpfile],
                 capture_output=True, text=True,
                 cwd="D:/password_guesser"
@@ -964,7 +964,7 @@ class TestHelpCommand:
     def test_help_no_args(self):
         """Test help command without arguments."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "help"],
+            [sys.executable, "manatrix/cli.py", "help"],
             capture_output=True, text=True,
             cwd="D:/password_guesser"
         )
@@ -975,7 +975,7 @@ class TestHelpCommand:
     def test_help_specific_command(self):
         """Test help for a specific command."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "help", "scan"],
+            [sys.executable, "manatrix/cli.py", "help", "scan"],
             capture_output=True, text=True,
             cwd="D:/password_guesser"
         )
@@ -986,18 +986,18 @@ class TestHelpCommand:
     def test_help_with_examples(self):
         """Test help with examples flag."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "help", "train", "--examples"],
+            [sys.executable, "manatrix/cli.py", "help", "train", "--examples"],
             capture_output=True, text=True,
             cwd="D:/password_guesser"
         )
         assert result.returncode == 0
         assert "Examples" in result.stdout
-        assert "password-guesser train" in result.stdout
+        assert "manatrix train" in result.stdout
 
     def test_help_with_verbose(self):
         """Test help with verbose flag."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "help", "interactive", "-v"],
+            [sys.executable, "manatrix/cli.py", "help", "interactive", "-v"],
             capture_output=True, text=True,
             cwd="D:/password_guesser"
         )
@@ -1007,7 +1007,7 @@ class TestHelpCommand:
     def test_help_unknown_command(self):
         """Test help for unknown command."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "help", "nonexistent123"],
+            [sys.executable, "manatrix/cli.py", "help", "nonexistent123"],
             capture_output=True, text=True,
             cwd="D:/password_guesser"
         )
@@ -1021,7 +1021,7 @@ class TestChartCommand:
     def test_chart_bar_default(self):
         """Test bar chart with demo data."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "chart",
+            [sys.executable, "manatrix/cli.py", "chart",
              "-o", "test_bar.png", "--type", "bar", "--title", "Test Bar"],
             capture_output=True, text=True,
             cwd="D:/password_guesser"
@@ -1033,7 +1033,7 @@ class TestChartCommand:
     def test_chart_pie(self):
         """Test pie chart."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "chart",
+            [sys.executable, "manatrix/cli.py", "chart",
              "-o", "test_pie.png", "--type", "pie"],
             capture_output=True, text=True,
             cwd="D:/password_guesser"
@@ -1045,7 +1045,7 @@ class TestChartCommand:
     def test_chart_line_svg(self):
         """Test line chart with SVG output."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "chart",
+            [sys.executable, "manatrix/cli.py", "chart",
              "-o", "test_line.svg", "--type", "line"],
             capture_output=True, text=True,
             cwd="D:/password_guesser"
@@ -1065,7 +1065,7 @@ class TestChartCommand:
 
         try:
             result = subprocess.run(
-                [sys.executable, "password_guesser/cli.py", "chart",
+                [sys.executable, "manatrix/cli.py", "chart",
                  "-d", tmpfile, "-o", "test_data_chart.png", "--type", "bar"],
                 capture_output=True, text=True,
                 cwd="D:/password_guesser"
@@ -1079,7 +1079,7 @@ class TestChartCommand:
     def test_chart_help(self):
         """Test chart help."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "chart", "--help"],
+            [sys.executable, "manatrix/cli.py", "chart", "--help"],
             capture_output=True, text=True,
             cwd="D:/password_guesser"
         )
@@ -1108,7 +1108,7 @@ class TestExportCommand:
 
         try:
             result = subprocess.run(
-                [sys.executable, "password_guesser/cli.py", "export",
+                [sys.executable, "manatrix/cli.py", "export",
                  "-i", tmpfile, "-o", "test_export.html", "--include-charts", "--embed-images"],
                 capture_output=True, text=True,
                 cwd="D:/password_guesser"
@@ -1126,7 +1126,7 @@ class TestExportCommand:
     def test_export_help(self):
         """Test export help."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "export", "--help"],
+            [sys.executable, "manatrix/cli.py", "export", "--help"],
             capture_output=True, text=True,
             cwd="D:/password_guesser"
         )
@@ -1137,7 +1137,7 @@ class TestExportCommand:
     def test_export_missing_input(self):
         """Test export with missing input file."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "export",
+            [sys.executable, "manatrix/cli.py", "export",
              "-i", "nonexistent.json", "-o", "out.html"],
             capture_output=True, text=True,
             cwd="D:/password_guesser"
@@ -1165,7 +1165,7 @@ class TestReportCommand:
 
         try:
             result = subprocess.run(
-                [sys.executable, "password_guesser/cli.py", "report",
+                [sys.executable, "manatrix/cli.py", "report",
                  "-s", tmpfile, "-o", "test_report.md", "--include-charts"],
                 capture_output=True, text=True,
                 cwd="D:/password_guesser"
@@ -1179,7 +1179,7 @@ class TestReportCommand:
     def test_report_help(self):
         """Test report help shows new options."""
         result = subprocess.run(
-            [sys.executable, "password_guesser/cli.py", "report", "--help"],
+            [sys.executable, "manatrix/cli.py", "report", "--help"],
             capture_output=True, text=True,
             cwd="D:/password_guesser"
         )

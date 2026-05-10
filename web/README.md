@@ -1,11 +1,11 @@
-# Password Guesser - Web Interface
+# Manatrix - Web Interface
 
 基于 FastAPI 的 Web 前端界面。
 
 ## 启动
 
 ```bash
-cd password_guesser
+cd manatrix
 uvicorn web.app:app --reload --port 8000
 ```
 

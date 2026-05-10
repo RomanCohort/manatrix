@@ -1,7 +1,7 @@
 """
 Web Package
 
-FastAPI web application and supporting modules for the Password Guesser
+FastAPI web application and supporting modules for the Manatrix
 penetration testing framework.
 
 Modules:
@@ -11,6 +11,7 @@ Modules:
 - websocket: WebSocket support
 - pentest_api: Penetration testing API endpoints
 - rate_limit: Rate limiting middleware
+- studio: Manatrix Studio IDE (RStudio-like)
 """
 
 from web.app import app, state

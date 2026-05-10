@@ -1,5 +1,5 @@
 """
 Scripts Package
 
-Utility scripts for the Password Guesser framework.
+Utility scripts for the Manatrix framework.
 """

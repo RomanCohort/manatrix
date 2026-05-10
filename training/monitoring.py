@@ -33,7 +33,7 @@ class TrainingMonitor:
     def __init__(
         self,
         log_dir: str = 'logs',
-        project_name: str = 'password_guesser',
+        project_name: str = 'manatrix',
     ):
         self.log_dir = log_dir
         self.project_name = project_name
@@ -292,7 +292,7 @@ class TensorBoardLogger:
         log_dir: Directory where TensorBoard event files are written.
     """
 
-    def __init__(self, log_dir: str = 'runs/password_guesser'):
+    def __init__(self, log_dir: str = 'runs/manatrix'):
         self.log_dir = log_dir
         self._writer = None
 

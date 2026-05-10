@@ -1,5 +1,5 @@
 """
-FastAPI Web Server for Password Guesser
+FastAPI Web Server for Manatrix
 
 Provides REST API and web interface for the password guessing system.
 
@@ -121,7 +121,7 @@ state = AppState()
 # ============== FastAPI App ==============
 
 app = FastAPI(
-    title="Password Guesser & Penetration Testing Framework",
+    title="Manatrix & Penetration Testing Framework",
     description="AI-powered targeted password guessing and knowledge-enhanced automated penetration testing",
     version="2.0.0"
 )
@@ -272,7 +272,7 @@ async def index():
     if os.path.exists(html_path):
         with open(html_path, "r", encoding="utf-8") as f:
             return f.read()
-    return "<h1>Password Guesser</h1><p>Please create templates/index.html</p>"
+    return "<h1>Manatrix</h1><p>Please create templates/index.html</p>"
 
 
 @app.get("/pentest", response_class=HTMLResponse)
@@ -308,7 +308,7 @@ async def load_model(checkpoint_path: Optional[str] = None):
 
         # Load checkpoint if provided
         if checkpoint_path and os.path.exists(checkpoint_path):
-            checkpoint = torch.load(checkpoint_path, map_location=state.device)
+            checkpoint = torch.load(checkpoint_path, map_location=state.device, weights_only=True)
             state.model.load_state_dict(checkpoint['model_state_dict'])
             state.mlp_encoder.load_state_dict(checkpoint['mlp_state_dict'])
             state.checkpoint_path = checkpoint_path
@@ -714,7 +714,7 @@ async def get_enhanced_status():
 @app.on_event("startup")
 async def startup_event():
     """Initialize on startup"""
-    print(f"Starting Password Guesser on {state.device}")
+    print(f"Starting Manatrix on {state.device}")
 
     # Load env config
     try:

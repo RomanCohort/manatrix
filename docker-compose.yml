@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  password-guesser:
+  manatrix:
     build: .
     ports:
       - "8000:8000"
@@ -21,7 +21,7 @@ services:
     restart: unless-stopped
 
   # CPU-only version
-  password-guesser-cpu:
+  manatrix-cpu:
     build: .
     ports:
       - "8000:8000"
