@@ -191,6 +191,7 @@ class SimulatedAttackTest:
             max_steps=self.max_steps,
             enable_attack_team=False,  # Simplified for simulation
             enable_self_improvement=False,
+            authorization_path="data/authorization.json",
         )
 
         # Initialize orchestrator

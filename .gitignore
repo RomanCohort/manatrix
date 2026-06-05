@@ -116,3 +116,15 @@ dist/
 *.egg-info/
 *.spec
 Manatrix Studio.exe
+
+# Results (keep structure, ignore large files)
+results/*.json
+results/*.md
+!results/.gitkeep
+
+# Large binary files
+*.jar
+*.vmdk
+*.iso
+*.zip
+*.tar.gz
