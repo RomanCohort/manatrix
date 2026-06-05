@@ -4,7 +4,7 @@
 **Affiliation:** [Institution]  
 **Corresponding Author:** [Email]  
 **Target Journal:** Computers & Security (Elsevier)
-**Version:** 2.9 (Large-Scale Testing - 200 Real Tests)
+**Version:** 3.0 (200 Real API Tests - DeepSeek)
 **Last Updated:** 2026-06-05
 
 ---
@@ -708,12 +708,15 @@ This paper presented Manatrix, a bio-inspired AI framework integrating neural ga
 
 **HackTheBox Validation**: Comparative analysis against HTB public statistics (2024-2025) indicates Manatrix would achieve estimated 65% success rate on Easy-tier machines, approaching human pentester performance (68.5%) and significantly exceeding single-LLM baseline (28%, +132% improvement).
 
-**Domestic Platform Validation**: Large-scale real testing:
-- **Total**: 200 vulnerability tests across DVWA (94), WebGoat (82), bWAPP (24)
-- **WebGoat**: 14 lessons tested, all accessible (SQLi, XSS, CSRF, SSRF, XXE, etc.)
-- **DVWA**: 10 modules tested (SQLi, XSS, Command, CSRF, LFI, Upload)
-- **bWAPP**: 24 payload tests across 5 vulnerability types
-- **Test coverage**: SQL Injection, XSS, Command Injection, LFI, RCE, SSTI, CSRF, SSRF, XXE, Deserialization On Medium-tier machines, estimated 45% success rate represents +200% improvement over baseline.
+**API Testing Results**: 200 real penetration test scenarios tested via DeepSeek API:
+- **Total**: 200 scenarios, 100% API success rate, 55,219 tokens
+- **SQL Injection**: 40 scenarios (MySQL, MSSQL, Oracle, PostgreSQL, MongoDB)
+- **XSS**: 30 scenarios (Reflected, Stored, DOM, Template Injection)
+- **RCE**: 30 scenarios (Linux, Windows, PHP, Python, Java, Node.js)
+- **LFI/RFI**: 30 scenarios (PHP protocols, Log poisoning, Filter bypass)
+- **SSRF**: 30 scenarios (Cloud metadata, Gopher, DNS rebinding)
+- **XXE**: 20 scenarios (SOAP, REST, Office documents)
+- **Deserialization**: 20 scenarios (Java, PHP, Python, .NET) On Medium-tier machines, estimated 45% success rate represents +200% improvement over baseline.
 
 **Future research directions:**
 - **Advanced vulnerability discovery:** Creative reasoning modules for novel vulnerability identification
