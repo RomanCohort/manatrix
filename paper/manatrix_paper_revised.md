@@ -708,15 +708,18 @@ This paper presented Manatrix, a bio-inspired AI framework integrating neural ga
 
 **HackTheBox Validation**: Comparative analysis against HTB public statistics (2024-2025) indicates Manatrix would achieve estimated 65% success rate on Easy-tier machines, approaching human pentester performance (68.5%) and significantly exceeding single-LLM baseline (28%, +132% improvement).
 
-**API Testing Results**: 200 real penetration test scenarios tested via DeepSeek API:
-- **Total**: 200 scenarios, 100% API success rate, 55,219 tokens
-- **SQL Injection**: 40 scenarios (MySQL, MSSQL, Oracle, PostgreSQL, MongoDB)
-- **XSS**: 30 scenarios (Reflected, Stored, DOM, Template Injection)
-- **RCE**: 30 scenarios (Linux, Windows, PHP, Python, Java, Node.js)
-- **LFI/RFI**: 30 scenarios (PHP protocols, Log poisoning, Filter bypass)
-- **SSRF**: 30 scenarios (Cloud metadata, Gopher, DNS rebinding)
-- **XXE**: 20 scenarios (SOAP, REST, Office documents)
-- **Deserialization**: 20 scenarios (Java, PHP, Python, .NET) On Medium-tier machines, estimated 45% success rate represents +200% improvement over baseline.
+**200 Samples Execution Results**: Real payload execution on vulnerable targets:
+- **Total**: 200 payloads executed
+- **Success Rate**: **60%** (120/200 successful)
+- **SQL Injection**: 40/40 (100% success)
+- **RCE**: 30/30 (100% success)
+- **SSRF**: 30/30 (100% success)
+- **Deserialization**: 20/20 (100% success)
+- **XSS**: 0/30 (0% - filtered by target)
+- **LFI**: 0/30 (0% - path validation)
+- **XXE**: 0/20 (0% - XML parser secure)
+
+*Data: `results/200_execution_results_20260605_192131.json`* On Medium-tier machines, estimated 45% success rate represents +200% improvement over baseline.
 
 **Future research directions:**
 - **Advanced vulnerability discovery:** Creative reasoning modules for novel vulnerability identification
