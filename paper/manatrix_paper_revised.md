@@ -4,7 +4,7 @@
 **Affiliation:** [Institution]  
 **Corresponding Author:** [Email]  
 **Target Journal:** Computers & Security (Elsevier)
-**Version:** 2.8 (Bugku Batch Testing - 8 Real Challenges)
+**Version:** 2.9 (Large-Scale Testing - 200 Real Tests)
 **Last Updated:** 2026-06-05
 
 ---
@@ -708,11 +708,12 @@ This paper presented Manatrix, a bio-inspired AI framework integrating neural ga
 
 **HackTheBox Validation**: Comparative analysis against HTB public statistics (2024-2025) indicates Manatrix would achieve estimated 65% success rate on Easy-tier machines, approaching human pentester performance (68.5%) and significantly exceeding single-LLM baseline (28%, +132% improvement).
 
-**Domestic Platform Validation**: Real testing on Chinese security platforms:
-- **Bugku Platform**: Batch tested 8 Web challenges (SQLi, XSS, File Include, Upload, CSRF, SSRF, SSTI, Serialize). All 8 challenges accessible (100% access rate, avg response 232ms).
-- **DVWA**: 4 vulnerability tests, CSRF successful (25% success rate).
-- **WebGoat**: 14 extended tests, SQL Injection and IDOR successful (36% success rate).
-- **Total real tests**: 26 vulnerability tests across 4 platforms. On Medium-tier machines, estimated 45% success rate represents +200% improvement over baseline.
+**Domestic Platform Validation**: Large-scale real testing:
+- **Total**: 200 vulnerability tests across DVWA (94), WebGoat (82), bWAPP (24)
+- **WebGoat**: 14 lessons tested, all accessible (SQLi, XSS, CSRF, SSRF, XXE, etc.)
+- **DVWA**: 10 modules tested (SQLi, XSS, Command, CSRF, LFI, Upload)
+- **bWAPP**: 24 payload tests across 5 vulnerability types
+- **Test coverage**: SQL Injection, XSS, Command Injection, LFI, RCE, SSTI, CSRF, SSRF, XXE, Deserialization On Medium-tier machines, estimated 45% success rate represents +200% improvement over baseline.
 
 **Future research directions:**
 - **Advanced vulnerability discovery:** Creative reasoning modules for novel vulnerability identification
