@@ -1,6 +1,6 @@
 llm:
   api_base: https://api.deepseek.com/v1
-  api_key: sk-f76d77af2d434f38a2f957ef8a98d860
+  api_key: sk-5d84384532274931b9d45381b3c9263c
   model: deepseek-chat
   provider: deepseek
 model:
@@ -11,6 +11,7 @@ model:
 pentest:
   auto_mode: true
   max_steps: 50
+  authorization_path: data/authorization.json
 training:
   batch_size: 64
   epochs: 100

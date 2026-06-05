@@ -450,7 +450,7 @@ class TestPenTestOrchestrator:
         """Test orchestrator initialization."""
         from pentest.orchestrator import PenTestOrchestrator, PenTestConfig
 
-        config = PenTestConfig(max_steps=10)
+        config = PenTestConfig(max_steps=10, authorization_path="data/authorization.json")
         orch = PenTestOrchestrator(config)
 
         orch.initialize_from_scan({
@@ -465,7 +465,7 @@ class TestPenTestOrchestrator:
         """Test status retrieval."""
         from pentest.orchestrator import PenTestOrchestrator, PenTestConfig
 
-        config = PenTestConfig(max_steps=10)
+        config = PenTestConfig(max_steps=10, authorization_path="data/authorization.json")
         orch = PenTestOrchestrator(config)
         orch.initialize_from_scan({"format": "manual", "data": [sample_host_data]})
 
@@ -1068,7 +1068,7 @@ class TestExpertSystem:
         router = create_default_router()
 
         experts = router.get_registered_experts()
-        assert len(experts) == 6  # All 6 experts
+        assert len(experts) == 20  # Bio-Gated MoE 2.0: 20 domain experts
 
     def test_expert_success_tracking(self):
         """Test expert success rate tracking."""

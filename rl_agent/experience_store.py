@@ -234,7 +234,7 @@ class PersistentExperienceStore:
                     try:
                         data = json.loads(line.strip())
                         existing_timestamps.add(data.get('timestamp'))
-                        except Exception as e:
+                    except Exception as e:
                         print(f"[ERROR] {e}")
 
         # Append only new experiences
