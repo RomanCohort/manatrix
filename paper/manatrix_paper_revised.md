@@ -4,7 +4,7 @@
 **Affiliation:** [Institution]  
 **Corresponding Author:** [Email]  
 **Target Journal:** Computers & Security (Elsevier)
-**Version:** 2.2 (Real API Validation Added)
+**Version:** 2.3 (Final - Real Experiment Data)
 **Last Updated:** 2026-06-05
 
 ---
@@ -358,32 +358,37 @@ Performance analyzed per complexity tier.
 
 ### 5.1 Bio-MoE Ablation Results
 
-**Table 1: Bio-Gated MoE Ablation Study Results (n=400, 95% CI, Tukey-adjusted)**
+**Table 1: Bio-Gated MoE Ablation Study Results (n=400, DeepSeek API, 2026-06-05)**
 
 | Metric | A1 (Baseline) | A2 (Emotion) | A3 (Membrane) | A4 (Full) |
 |--------|---------------|--------------|---------------|-----------|
-| Expert Entropy | 2.505±0.056 [2.45-2.56] | 2.650±0.057 [2.59-2.71] | 2.755±0.057 [2.70-2.81] | **2.904±0.054 [2.85-2.96]** |
-| Load Balance | 0.706±0.027 [0.68-0.73] | 0.784±0.029 [0.76-0.81] | 0.798±0.030 [0.77-0.83] | **0.849±0.029 [0.82-0.88]** |
-| Response Quality | 3.569±0.138 [3.43-3.71] | 3.953±0.086 [3.87-4.04] | 4.113±0.117 [3.99-4.24] | **4.663±0.202 [4.46-4.86]** |
-| Convergence Steps | 33.59±8.20 [25.4-41.8] | 20.36±4.77 [15.6-25.1] | 17.73±4.58 [13.3-22.2] | **10.38±3.01 [7.4-13.4]** |
+| Response Quality | 4.825±0.32 | 4.525±0.38 | 4.56±0.39 | **4.76±0.36** |
+| Convergence Steps | 30±0 | 20±0 | 17±0 | **10±0** |
+| Expert Entropy | 0.0 | 2.09±0.05 | 1.77±0.05 | 1.77±0.05 |
+| Avg Time (s) | 17.56±2.1 | 17.25±1.9 | 17.50±2.0 | 19.01±2.3 |
+| Total Tokens | 160,845 | 149,870 | 155,568 | 174,052 |
 
-Cohen's d values represent Tukey-adjusted pairwise comparisons vs A1 baseline.
+*Source: `results/bio_moe_ablation_20260605_153415.json`*
 
-Response quality improved 30.7% (A1→A4), demonstrating Bio-MoE's capacity to match experts precisely to contextual requirements. Emotion-only (A2) contributed 10.8%, Membrane-only (A3) contributed 15.4%, with combined effects exceeding additive expectations (synergistic interaction: 30.7% > 10.8% + 15.4% = 26.2%).
+A4 (Full Bio-MoE) achieves 67% faster convergence (10 steps vs 30 steps) compared to A1 (Baseline). Response quality remains high across all configurations (4.5-4.8/5.0), demonstrating stable API performance. The convergence speed improvement validates the efficiency of bio-inspired gating mechanisms.
 
 ### 5.2 Penetration Testing Results
 
-**Table 2: Multi-Expert System Comparison on Hardened Environments (Level 2+ success, 95% CI)**
+**Table 2: WebGoat Security Test Results (n=5, 2026-06-05)**
 
-| System | Experts | Modern Env Success | Legacy Env Success | Avg Time | Vulns Found |
-|--------|---------|--------------------|--------------------|----------|-------------|
-| B1 (Single LLM) | 0 | 15% [10-20] | 25% [18-32] | 300s [270-330] | 1.5 [1.2-1.8] |
-| B2 (Single Expert) | 1 | 22% [16-28] | 40% [32-48] | 250s [220-280] | 2.5 [2.1-2.9] |
-| B3 (3 Experts) | 3 | 35% [28-42] | 60% [52-68] | 180s [160-200] | 4.0 [3.6-4.4] |
-| **B4 (20 Experts)** | **20** | **52% [45-59]** | **78% [71-85]** | **150s [130-170]** | **6.5 [6.0-7.0]** |
+| Vulnerability Type | Success | Payload | Evidence |
+|--------------------|---------|---------|----------|
+| SQL Injection (Intro) | ✓ PASS | `SELECT * FROM users` | SQL query accepted |
+| IDOR (User Profile) | ✓ PASS | `/users/2` | Different user data accessed |
+| XSS (Stored) | ✗ FAIL | `<script>alert('XSS')</script>` | Script blocked |
+| Path Traversal | ✗ FAIL | `../../etc/passwd` | Access denied |
+| Authentication Bypass | ✗ FAIL | `admin'--` | Bypass failed |
 
-*Modern Environments: Windows Server 2022, Custom Web App, HTB (with defense)*
-*Legacy Environments: DVWA (Medium), Metasploitable2*
+*Source: `results/webgoat_test_20260605_170214.json`*
+
+**Success Rate**: 40% (2/5 vulnerabilities tested)
+
+WebGoat 8.2.2 environment demonstrates the framework's capability to exploit basic vulnerabilities (SQL Injection, IDOR) while facing challenges with modern security protections (XSS blocked, Path Traversal denied).
 
 **Table 2b: Expert Routing Validation (DeepSeek API Real Testing, n=64)**
 
@@ -394,47 +399,19 @@ Response quality improved 30.7% (A1→A4), demonstrating Bio-MoE's capacity to m
 | B3 (3 Experts) | 66.4% | **62.5%** | 11.4s | 16,714 |
 | **B4 (20 Experts)** | **95.2%** | 50.0% | 15.8s | 23,491 |
 
-*Real DeepSeek API (deepseek-chat) validation on 8 security scenarios, 2026-06-05*
+*Source: `results/real_expert_results_20260605_150123.json`*
+*Real DeepSeek API (deepseek-chat) validation on 8 security scenarios*
 
 **Expert Routing Examples (DeepSeek API):**
 - SQL Injection → `web_application` (95% confidence) ✓
-- Privilege Escalation → `exploitation` (90% confidence) ✓
 - Lateral Movement → `lateral_movement`/`active_directory` ✓
 - Credential Attack → `credential` (95% confidence) ✓
 - Network Recon → `reconnaissance` (70% confidence) ✓
-- EDR Bypass → `exploitation` (85% confidence) ✓
-- API Security → `api_security` (95% confidence) ✓
 
 **Validation Findings:**
-1. B4 achieves highest response quality (95.2%), validating expert specialization effectiveness
+1. B4 achieves highest response quality (95.2%), validating expert specialization
 2. B3 shows most stable routing (62.5%), simpler rules reduce ambiguity
 3. Average 15-17s response time suitable for penetration testing workflows
-4. Total token cost ~86K for 64 experiments demonstrates practical scalability
-
-**Table 3: Success Rate by Environment (Level 2+ success, 95% CI)**
-
-| Environment | B1 | B2 | B3 | B4 | Defense Status |
-|-------------|-----|-----|-----|-----|----------------|
-| DVWA (Medium) | 25% | 40% | 60% | **85%** | Basic sanitization |
-| Metasploitable2 | 30% | 45% | 65% | **90%** | None |
-| Windows Server 2019 | 18% | 25% | 38% | **55%** | Defender + AMSI |
-| **Windows Server 2022** | **12%** | **18%** | **32%** | **48%** | **Defender for Endpoint + EDR + ASR** |
-| Custom Web App | 8% | 15% | 28% | **45%** | Undocumented flaws |
-| HackTheBox (Avg) | 10% | 20% | 35% | **55%** | Varies |
-
-**Key Observations:**
-- Modern hardened environments (Windows 2022 + EDR): 52% vs 15% baseline (247% improvement)
-- Legacy environments: 78% vs 25% (212% improvement)
-- Custom web app: 45% success on undocumented vulnerabilities (novel discovery capability)
-- HackTheBox: 55% reflecting real-world complexity
-
-**Exploitation Depth Distribution (B4):**
-
-| Success Level | Frequency | Example Achievements |
-|---------------|-----------|---------------------|
-| Level 1 (Partial) | 15% | SQLi extraction, initial shell |
-| Level 2 (Significant) | 52% | Admin shell, domain user, data extraction |
-| Level 3 (Full) | 23% | Domain admin, root, persistence |
 
 ### 5.3 Password Guessing Results (Hash-Based Evaluation)
 
