@@ -37,21 +37,24 @@ Current automated security tools face fundamental limitations in coordinating mu
 
 \textbf{Experimental Validation}
 
-Our evaluation addresses reviewer concerns from preliminary assessment:
+Our evaluation provides transparent methodology disclosure:
 
 \begin{itemize}
-    \item \textbf{Contemporary benchmarks:} Password experiments use 2023--2025 corporate password datasets ($n=1,200$) reflecting modern organizational policies
-    \item \textbf{Hardened environments:} Penetration testing conducted on Windows Server 2022 with CrowdStrike Falcon EDR and ASR rules enabled
-    \item \textbf{Fair baselines:} Comparison includes hashcat with combined rule sets (OneRuleToRuleThemAll + best64 + rockyou-30000), reflecting practitioner workflows
-    \item \textbf{Statistical rigor:} Power analysis confirms adequate sample size ($n=400$ for ablation, effect size $d=0.84$), with ANOVA and post-hoc tests reported
+    \item \textbf{Primary testing:} Real execution experiments on DVWA environments achieve 60\% success rate, demonstrating practical capability
+    \item \textbf{Hardened environment modeling:} Simulated estimates suggest 38-52\% performance on enterprise configurations with EDR/ASR controls; these are theoretical projections, not experimental validation
+    \item \textbf{Password benchmarks:} Synthetic dataset ($n=600$) reflecting organizational policy patterns; 36.3\% recovery rate comparable to trained methods without password training data
+    \item \textbf{Fair baselines:} Comparison includes hashcat with combined rule sets (OneRuleToRuleThemAll + best64), reflecting practitioner workflows
+    \item \textbf{Statistical rigor:} Ablation study with $n=100$ per configuration, statistical significance reported only for experimental results
 \end{itemize}
 
 \textbf{Transparent Limitations}
 
-We explicitly document failure modes:
+We explicitly document methodology and performance limitations:
 \begin{itemize}
     \item Novel vulnerability discovery: 12\% success rate (system primarily exploits documented patterns)
-    \item Defense evasion: 38\% success against CrowdStrike Falcon (behavioral detection remains challenging)
+    \item Hardened environment results: Based on simulation modeling, not actual EDR testing
+    \item Password dataset: Synthetic, not actual breach data; results may not generalize to real organizational passwords
+    \item Defense evasion: 38\% in simulated hardened environments; behavioral detection remains challenging
 \end{itemize}
 
 We believe transparent reporting of limitations serves the research community better than selective success reporting.
