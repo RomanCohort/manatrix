@@ -1,0 +1,75 @@
+\documentclass[11pt]{letter}
+\usepackage[margin=1in]{geometry}
+\usepackage{times}
+\usepackage{hyperref}
+
+\signature{Ziyi Yan\\
+Ph.D. Candidate\\
+College of Computer Science and Technology\\
+Jilin University\\
+Email: yanzy8225@mails.jlu.edu.cn}
+
+\address{College of Computer Science and Technology\\
+Jilin University\\
+Changchun, China}
+
+\begin{document}
+
+\begin{letter}{Editor-in-Chief\\
+\textit{Computers \& Security}\\
+Elsevier}
+
+\opening{Dear Editor-in-Chief,}
+
+\textbf{Re: Manuscript Submission --- ``Manatrix: A Bio-Inspired Multi-Expert Framework for Context-Aware Password Analysis and Automated Security Assessment''}
+
+We submit our manuscript for consideration in \textit{Computers \& Security}. This work addresses the challenge of automating comprehensive security assessments through bio-inspired multi-expert coordination.
+
+\textbf{Contributions}
+
+Current automated security tools face fundamental limitations in coordinating multi-phase assessments. Traditional rule-based systems cannot adapt to evolving attack surfaces, while single-model approaches struggle to maintain coherence across reconnaissance, exploitation, and post-exploitation phases. Our approach introduces three contributions:
+
+\begin{enumerate}
+    \item A Bio-Gated Mixture of Experts (Bio-MoE) architecture incorporating membrane potential dynamics and emotional state modulation for adaptive expert selection
+    \item A 20-expert coordination system with hierarchical routing for comprehensive security assessments
+    \item Context-driven password pattern inference using sequence modeling and differential evolution optimization
+\end{enumerate}
+
+\textbf{Experimental Validation}
+
+Our evaluation addresses reviewer concerns from preliminary assessment:
+
+\begin{itemize}
+    \item \textbf{Contemporary benchmarks:} Password experiments use 2023--2025 corporate password datasets ($n=1,200$) reflecting modern organizational policies
+    \item \textbf{Hardened environments:} Penetration testing conducted on Windows Server 2022 with CrowdStrike Falcon EDR and ASR rules enabled
+    \item \textbf{Fair baselines:} Comparison includes hashcat with combined rule sets (OneRuleToRuleThemAll + best64 + rockyou-30000), reflecting practitioner workflows
+    \item \textbf{Statistical rigor:} Power analysis confirms adequate sample size ($n=400$ for ablation, effect size $d=0.84$), with ANOVA and post-hoc tests reported
+\end{itemize}
+
+\textbf{Transparent Limitations}
+
+We explicitly document failure modes:
+\begin{itemize}
+    \item Novel vulnerability discovery: 12\% success rate (system primarily exploits documented patterns)
+    \item Defense evasion: 38\% success against CrowdStrike Falcon (behavioral detection remains challenging)
+\end{itemize}
+
+We believe transparent reporting of limitations serves the research community better than selective success reporting.
+
+\textbf{Ethical Framework}
+
+Section 6.4 provides comprehensive dual-use analysis including misuse scenarios, technical safeguards (access-controlled release, hash-only operation, audit logging), and deployment recommendations. Source code will be available for academic research through controlled-access repository.
+
+\textbf{Relevance to \textit{Computers \& Security}}
+
+Your readership spans academic researchers and security practitioners. Our work bridges these communities by providing rigorous experimental methodology (statistical analysis, reproducibility scripts) alongside practical deployment considerations (Docker containers, tool integration, ethical controls). The bio-inspired coordination mechanism draws from established neuroscience literature, while the password analysis framework addresses organizational security concerns without requiring sensitive training datasets.
+
+The manuscript has not been published elsewhere and is not under consideration by another journal.
+
+We thank you for your consideration and look forward to your response.
+
+\closing{Sincerely,}
+
+\end{letter}
+
+\end{document}
