@@ -1,0 +1,18 @@
+llm:
+  api_base: https://api.deepseek.com/v1
+  api_key: YOUR_API_KEY_HERE
+  model: deepseek-chat
+  provider: deepseek
+model:
+  d_model: 256
+  n_layer: 4
+  name: mamba-password
+  vocab_size: 128
+pentest:
+  auto_mode: true
+  max_steps: 50
+  authorization_path: data/authorization.json
+training:
+  batch_size: 64
+  epochs: 100
+  learning_rate: 0.001
