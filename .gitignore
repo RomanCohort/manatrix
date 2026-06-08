@@ -128,3 +128,4 @@ results/*.md
 *.iso
 *.zip
 *.tar.gz
+config.yaml
